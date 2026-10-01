@@ -1,0 +1,46 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 56a2aec4518e4e38824d67db28a0f25b, type: 3}
+  m_Name: Level018
+  m_EditorClassIdentifier: Assembly-CSharp::LevelDefinition
+  levelNumber: 18
+  difficulty: 1
+  columns: 4
+  rows: 7
+  unavailableCells: []
+  startingBlocks: []
+  obstacles:
+  - type: 0
+    column: 2
+    row: 4
+    durability: 2
+  - type: 0
+    column: 1
+    row: 4
+    durability: 1
+  - type: 0
+    column: 3
+    row: 3
+    durability: 1
+  - type: 0
+    column: 0
+    row: 3
+    durability: 1
+  queue: []
+  randomMaximumLevel: 6
+  moveLimit: 0
+  objectives:
+  - type: 0
+    target: 5
+  - type: 1
+    target: 210
+  showAdAfterWin: 0

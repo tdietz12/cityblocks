@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3bc9fd1de8a74b3f8f2ed617c50b191c, type: 3}
+  m_Name: DailySpecialOffer
+  m_EditorClassIdentifier:
+  productId: 
+  appleProductId: 
+  googleProductId: 
+  displayName: Daily Special
+  description: Configure the offer description and included booster uses.
+  priceInPowerUpUses: 0
+  includedUses:
+    deleteUses: 0
+    deleteRowUses: 0
+    levelUpUses: 0
+    extraTurnsUses: 0
+  dailySpecial: 1
+  noAdsOffer: 0
+  nonConsumable: 0
+  extraMovesOnPurchase: 0
+  priceValue: 0
+  currencyCode: USD

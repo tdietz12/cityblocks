@@ -1,0 +1,31 @@
+{
+  "project_info": {
+    "project_number": "907840280573",
+    "project_id": "cityblocks-f9373",
+    "storage_bucket": "cityblocks-f9373.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:907840280573:ios:20f5ca8aff3f952063ab94",
+        "android_client_info": {
+          "package_name": "com.Unity-Technologies.com.unity.template.CityBlocks"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4SKt_9SoBYK1xQB1YKo1jZsURa5891JE"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 0
+        },
+        "appinvite_service": {
+          "status": 1
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
