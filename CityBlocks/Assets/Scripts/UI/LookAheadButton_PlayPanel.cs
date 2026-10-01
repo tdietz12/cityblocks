@@ -5,7 +5,7 @@ using UnityEngine.UI;
 
 namespace UI
 {
-    public class DeleteRowButton_PlayPanel : MonoBehaviour
+    public class LookAheadButton_PlayPanel : MonoBehaviour
     {
         public GameController game;
         private Button button;
@@ -21,14 +21,14 @@ namespace UI
 
         private void Refresh()
         {
-            int uses = PowerUpStore.Uses(GameController.PowerUpType.deleteRow);
+            int uses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
             if (button != null) button.interactable = uses > 0;
-            if (label != null) label.text = "DELETE ROW (" + uses + ")";
+            if (label != null) label.text = "LOOK AHEAD (" + uses + ")";
         }
 
         public void ButtonPress()
         {
-            if (game != null) game.TryBeginPowerUp(GameController.PowerUpType.deleteRow);
+            if (game != null) game.TryBeginPowerUp(GameController.PowerUpType.lookAhead);
         }
     }
 }

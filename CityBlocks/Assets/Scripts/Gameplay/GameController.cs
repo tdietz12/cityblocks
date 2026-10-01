@@ -24,7 +24,7 @@ namespace Gameplay
         public enum PowerUpType
         {
             delete,
-            deleteRow,
+            lookAhead,
             levelUp,
             extraTurns
         }
@@ -37,7 +37,7 @@ namespace Gameplay
         public GameObject playPanel;
         public GameObject levelUpPanel;
         public GameObject powerUpPanel_Delete;
-        public GameObject powerUpPanel_DeleteRow;
+        public GameObject powerUpPanel_LookAhead;
         public GameObject powerUpPanel_LevelUp;
         public GameObject losePanel;
 
@@ -255,8 +255,9 @@ namespace Gameplay
                         powerUpPanel_Delete.SetActive(false);
                     }
 
-                    if (powerUp == PowerUpType.deleteRow)
+                    if (powerUp == PowerUpType.lookAhead)
                     {
+                        /*
                         bool hasTower = false;
                         for (int column = 0; column < grid.totalColumns; column++)
                             if (grid.grid[column, row] != null) { hasTower = true; break; }
@@ -273,8 +274,11 @@ namespace Gameplay
 
                             grid.ResolveGravity(columnInThisRow);
                         }
+*/
+
+
                         playPanel.SetActive(true);
-                        powerUpPanel_DeleteRow.SetActive(false);
+                        powerUpPanel_LookAhead.SetActive(false);
                     }
 
                     if (powerUp == PowerUpType.levelUp)
@@ -340,7 +344,7 @@ namespace Gameplay
 
         private void RecordBoosterUse()
         {
-            string id = powerUp == PowerUpType.deleteRow ? "delete_row" : powerUp.ToString();
+            string id = powerUp == PowerUpType.lookAhead ? "delete_row" : powerUp.ToString();
             bool endless = LevelFlow.ActiveSession == null;
             int currentLevel = endless ? level : LevelFlow.ActiveSession.Definition.levelNumber;
             int attempt = endless ? EndlessAttemptNumber : LevelFlow.ActiveSession.AttemptNumber;

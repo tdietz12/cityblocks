@@ -91,7 +91,7 @@ namespace Gameplay
             switch (type)
             {
                 case GameController.PowerUpType.delete: return deleteUses;
-                case GameController.PowerUpType.deleteRow: return deleteRowUses;
+                case GameController.PowerUpType.lookAhead: return deleteRowUses;
                 case GameController.PowerUpType.levelUp: return levelUpUses;
                 case GameController.PowerUpType.extraTurns: return extraTurnsUses;
                 default: return 0;
@@ -104,7 +104,7 @@ namespace Gameplay
             switch (type)
             {
                 case GameController.PowerUpType.delete: deleteUses--; break;
-                case GameController.PowerUpType.deleteRow: deleteRowUses--; break;
+                case GameController.PowerUpType.lookAhead: deleteRowUses--; break;
                 case GameController.PowerUpType.levelUp: levelUpUses--; break;
                 case GameController.PowerUpType.extraTurns: extraTurnsUses--; break;
                 default: return false;

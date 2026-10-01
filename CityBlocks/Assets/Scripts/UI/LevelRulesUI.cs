@@ -1,15 +1,51 @@
 using Gameplay;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 namespace UI
 {
     public class LevelRulesUI : MonoBehaviour
     {
+        public static LevelRulesUI Instance { get; private set; }
+
+        [Header("Header / Score HUD")]
+        [SerializeField] private GameObject scorePanel;
+        [SerializeField] private TMP_Text scoreText;
+        [SerializeField] private TMP_Text recordScoreText;
         [SerializeField] private TMP_Text movesLabel;
-        [SerializeField] private TMP_Text previewLabel;
+
+        [Header("Play HUD")]
+        [SerializeField] private GameObject playPanel;
+        [SerializeField] private Button pauseButton;
+        [SerializeField] private Button deletePowerUpButton;
+        [SerializeField] private TMP_Text deletePowerUpLabel;
+        [SerializeField] private Button levelUpPowerUpButton;
+        [SerializeField] private TMP_Text levelUpPowerUpLabel;
+        [SerializeField] private Button lookAheadPowerUpButton;
+        [SerializeField] private TMP_Text lookAheadPowerUpLabel;
         [SerializeField] private Button previewButton;
+        [SerializeField] private TMP_Text previewLabel;
+
+        [Header("Start / Pause Menu")]
+        [SerializeField] private GameObject startPanel;
+        [SerializeField] private Button playButton;
+        [SerializeField] private TMP_Text playButtonLabel;
+        [SerializeField] private Button startBackButton;
+
+        [Header("Power Up Prompts")]
+        [SerializeField] private GameObject powerUpPanel_Delete;
+        [SerializeField] private GameObject powerUpPanel_LookAhead;
+        [SerializeField] private GameObject powerUpPanel_LevelUp;
+
+        [Header("Endless Panels")]
+        [SerializeField] private GameObject levelUpPanel;
+        [SerializeField] private Button continueLevelUpButton;
+        [SerializeField] private GameObject endlessLossPanel;
+        [SerializeField] private Button endlessLossBackButton;
+
+        [Header("Win / Loss Panels")]
         [SerializeField] private GameObject winPanel;
         [SerializeField] private Button nextLevelButton;
         [SerializeField] private Button winMenuButton;
@@ -18,6 +54,8 @@ namespace UI
         [SerializeField] private Button lossMenuButton;
         [SerializeField] private Button buyExtraMovesButton;
         [SerializeField] private StoreOfferDefinition extraMovesOffer;
+
+        [Header("Tutorial")]
         [SerializeField] private GameObject tutorialPanel;
         [SerializeField] private TMP_Text tutorialLabel;
         [SerializeField] private Button tutorialNextButton;
@@ -25,69 +63,319 @@ namespace UI
         private LevelSession session;
         private GameController game;
         private int tutorialStep;
+        private bool isBound;
+        private bool listenersRegistered;
+
+        public bool IsLevelMode => session != null || LevelFlow.IsLevelMode;
+        public LevelSession Session => session;
+        public GameController Game => game;
 
         private void Awake()
         {
-            if (!LevelFlow.IsLevelMode) gameObject.SetActive(false);
+            Instance = this;
+        }
+
+        private void Start()
+        {
+            if (game == null)
+            {
+                game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            }
+
+            RegisterListeners();
+
+            if (!LevelFlow.IsLevelMode)
+            {
+                InitializeEndlessMode();
+            }
+            else if (session == null && LevelFlow.ActiveSession != null)
+            {
+                Bind(LevelFlow.ActiveSession, game);
+            }
+        }
+
+        public void InitializeEndlessMode()
+        {
+            session = null;
+            if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
+
+            if (movesLabel != null) movesLabel.gameObject.SetActive(false);
+            if (previewButton != null) previewButton.gameObject.SetActive(false);
+            if (winPanel != null) winPanel.SetActive(false);
+            if (lossPanel != null) lossPanel.SetActive(false);
+            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+            if (tutorialPanel != null) tutorialPanel.SetActive(false);
+            if (levelUpPanel != null) levelUpPanel.SetActive(false);
+            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
+            if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
+            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
+
+            if (scorePanel != null) scorePanel.SetActive(true);
+
+            if (game != null && game.state == GameController.GameState.play)
+            {
+                if (startPanel != null) startPanel.SetActive(false);
+                if (playPanel != null) playPanel.SetActive(true);
+            }
+            else
+            {
+                if (startPanel != null) startPanel.SetActive(true);
+                if (playPanel != null) playPanel.SetActive(false);
+            }
+
+            if (playButtonLabel != null) playButtonLabel.text = "PLAY";
+
+            isBound = true;
+            Refresh();
         }
 
         public void Bind(LevelSession levelSession, GameController gameController)
         {
             session = levelSession;
             game = gameController;
-            previewButton.onClick.AddListener(ActivatePreview);
-            nextLevelButton.onClick.AddListener(NextLevel);
-            winMenuButton.onClick.AddListener(session.ReturnToMenu);
-            retryButton.onClick.AddListener(session.Retry);
-            lossMenuButton.onClick.AddListener(session.ReturnToMenu);
-            if (buyExtraMovesButton != null) buyExtraMovesButton.onClick.AddListener(BuyExtraMoves);
-            if (tutorialNextButton != null) tutorialNextButton.onClick.AddListener(AdvanceTutorial);
-            winPanel.SetActive(false);
-            lossPanel.SetActive(false);
+
+            RegisterListeners();
+
+            if (movesLabel != null) movesLabel.gameObject.SetActive(true);
+            if (previewButton != null) previewButton.gameObject.SetActive(true);
+            if (winPanel != null) winPanel.SetActive(false);
+            if (lossPanel != null) lossPanel.SetActive(false);
+            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+            if (levelUpPanel != null) levelUpPanel.SetActive(false);
+            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
+            if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
+            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
+
             if (buyExtraMovesButton != null)
                 buyExtraMovesButton.gameObject.SetActive(extraMovesOffer != null &&
                                                          extraMovesOffer.extraMovesOnPurchase > 0 && !string.IsNullOrWhiteSpace(extraMovesOffer.productId));
             if (tutorialPanel != null) tutorialPanel.SetActive(false);
+
+            if (scorePanel != null) scorePanel.SetActive(true);
+
+            if (ShouldShowTutorial())
+            {
+                if (startPanel != null) startPanel.SetActive(false);
+                if (playPanel != null) playPanel.SetActive(false);
+                ShowTutorialStep();
+            }
+            else
+            {
+                if (game != null && game.state == GameController.GameState.play)
+                {
+                    if (startPanel != null) startPanel.SetActive(false);
+                    if (playPanel != null) playPanel.SetActive(true);
+                }
+                else
+                {
+                    if (startPanel != null) startPanel.SetActive(true);
+                    if (playPanel != null) playPanel.SetActive(false);
+                }
+            }
+
+            if (playButtonLabel != null) playButtonLabel.text = "PLAY";
+
+            isBound = true;
             Refresh();
-            if (ShouldShowTutorial()) ShowTutorialStep();
+        }
+
+        private void RegisterListeners()
+        {
+            if (listenersRegistered) return;
+            listenersRegistered = true;
+
+            if (playButton != null) playButton.onClick.AddListener(StartGame);
+            if (startBackButton != null) startBackButton.onClick.AddListener(ReturnToMenu);
+            if (pauseButton != null) pauseButton.onClick.AddListener(PauseGame);
+
+            if (deletePowerUpButton != null) deletePowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.delete));
+            if (levelUpPowerUpButton != null) levelUpPowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.levelUp));
+            if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.lookAhead));
+            if (previewButton != null) previewButton.onClick.AddListener(ActivatePreview);
+
+            if (continueLevelUpButton != null) continueLevelUpButton.onClick.AddListener(ContinueFromLevelUp);
+
+            if (nextLevelButton != null) nextLevelButton.onClick.AddListener(NextLevel);
+            if (winMenuButton != null) winMenuButton.onClick.AddListener(ReturnToMenu);
+            if (retryButton != null) retryButton.onClick.AddListener(Retry);
+            if (lossMenuButton != null) lossMenuButton.onClick.AddListener(ReturnToMenu);
+            if (buyExtraMovesButton != null) buyExtraMovesButton.onClick.AddListener(BuyExtraMoves);
+            if (endlessLossBackButton != null) endlessLossBackButton.onClick.AddListener(ReturnToMenu);
+
+            if (tutorialNextButton != null) tutorialNextButton.onClick.AddListener(AdvanceTutorial);
+        }
+
+        public void StartGame()
+        {
+            if (game != null) game.state = GameController.GameState.play;
+            if (startPanel != null) startPanel.SetActive(false);
+            if (playPanel != null) playPanel.SetActive(true);
+            Refresh();
+        }
+
+        public void PauseGame()
+        {
+            if (game != null) game.state = GameController.GameState.start;
+            if (playPanel != null) playPanel.SetActive(false);
+            if (startPanel != null) startPanel.SetActive(true);
+            if (playButtonLabel != null) playButtonLabel.text = "RESUME";
+            Refresh();
+        }
+
+        public void ContinueFromLevelUp()
+        {
+            if (levelUpPanel != null) levelUpPanel.SetActive(false);
+            if (playPanel != null) playPanel.SetActive(true);
+            if (game != null) game.state = GameController.GameState.play;
+            Refresh();
+        }
+
+        public void TryUsePowerUp(GameController.PowerUpType type)
+        {
+            if (game == null) return;
+            if (game.TryBeginPowerUp(type))
+            {
+                if (playPanel != null) playPanel.SetActive(false);
+                switch (type)
+                {
+                    case GameController.PowerUpType.delete:
+                        if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(true);
+                        break;
+                    case GameController.PowerUpType.levelUp:
+                        if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(true);
+                        break;
+                    case GameController.PowerUpType.lookAhead:
+                        if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(true);
+                        break;
+                }
+            }
+        }
+
+        public void ReturnToMenu()
+        {
+            if (session != null)
+            {
+                session.ReturnToMenu();
+            }
+            else
+            {
+                if (game != null) game.ResetValuesOnLoss();
+                LevelFlow.GoToMenu();
+            }
+        }
+
+        public void Retry()
+        {
+            if (session != null)
+            {
+                session.Retry();
+            }
+            else
+            {
+                if (game != null) game.ResetValuesOnLoss();
+                SceneManager.LoadScene("EndlessMode");
+            }
         }
 
         public void Refresh()
         {
-            if (session == null || game == null) return;
-            movesLabel.text = session.Definition.moveLimit > 0
-                ? "MOVES: " + session.MovesRemaining
-                : "MOVES: ∞";
-            previewButton.interactable = !game.PreviewUsed &&
-                                         game.state == GameController.GameState.play;
-            previewLabel.text = game.PreviewTurnsRemaining > 0
-                ? "SHOW 3: " + game.PreviewTurnsRemaining + " TURNS"
-                : game.PreviewUsed ? "SHOW 3: USED" : "SHOW 3: 3 TURNS";
+            if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            if (game == null) return;
+
+            if (scoreText != null) scoreText.text = game.score.ToString();
+            if (recordScoreText != null) recordScoreText.text = game.recordScore.ToString();
+
+            if (session != null && movesLabel != null)
+            {
+                movesLabel.text = session.Definition.moveLimit > 0
+                    ? "MOVES: " + session.MovesRemaining
+                    : "MOVES: ∞";
+            }
+
+            if (previewButton != null)
+            {
+                if (session != null)
+                {
+                    previewButton.gameObject.SetActive(true);
+                    previewButton.interactable = !game.PreviewUsed &&
+                                                 game.state == GameController.GameState.play;
+                    if (previewLabel != null)
+                    {
+                        previewLabel.text = game.PreviewTurnsRemaining > 0
+                            ? "SHOW 3: " + game.PreviewTurnsRemaining + " TURNS"
+                            : game.PreviewUsed ? "SHOW 3: USED" : "SHOW 3: 3 TURNS";
+                    }
+                }
+                else
+                {
+                    previewButton.gameObject.SetActive(false);
+                }
+            }
+
+            RefreshPowerUps();
+        }
+
+        private void RefreshPowerUps()
+        {
+            if (game == null) return;
+            bool canUse = game.state == GameController.GameState.play && !game.IsResolvingMove;
+
+            int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);
+            if (deletePowerUpButton != null) deletePowerUpButton.interactable = canUse && deleteUses > 0;
+            if (deletePowerUpLabel != null) deletePowerUpLabel.text = "DELETE (" + deleteUses + ")";
+
+            int levelUpUses = PowerUpStore.Uses(GameController.PowerUpType.levelUp);
+            if (levelUpPowerUpButton != null) levelUpPowerUpButton.interactable = canUse && levelUpUses > 0;
+            if (levelUpPowerUpLabel != null) levelUpPowerUpLabel.text = "LVL UP (" + levelUpUses + ")";
+
+            int lookAheadUses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
+            if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.interactable = canUse && lookAheadUses > 0;
+            if (lookAheadPowerUpLabel != null) lookAheadPowerUpLabel.text = "LOOK AHEAD (" + lookAheadUses + ")";
+        }
+
+        private void Update()
+        {
+            RefreshPowerUps();
         }
 
         public void ShowWin()
         {
-            winPanel.SetActive(true);
-            game.playPanel.SetActive(false);
-            nextLevelButton.interactable = LevelCatalog.Next(session.Definition.levelNumber) != null;
+            if (winPanel != null) winPanel.SetActive(true);
+            if (playPanel != null) playPanel.SetActive(false);
+            if (nextLevelButton != null && session != null)
+                nextLevelButton.interactable = LevelCatalog.Next(session.Definition.levelNumber) != null;
             Refresh();
         }
 
         public void ShowLoss()
         {
-            lossPanel.SetActive(true);
-            game.playPanel.SetActive(false);
-            if (buyExtraMovesButton != null)
-                buyExtraMovesButton.gameObject.SetActive(
-                    session.PendingFailedObjective == "moves_limit" && extraMovesOffer != null &&
-                    extraMovesOffer.extraMovesOnPurchase > 0 && !string.IsNullOrWhiteSpace(extraMovesOffer.productId));
+            if (playPanel != null) playPanel.SetActive(false);
+            if (session != null)
+            {
+                if (lossPanel != null) lossPanel.SetActive(true);
+                if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+                if (buyExtraMovesButton != null)
+                    buyExtraMovesButton.gameObject.SetActive(
+                        session.PendingFailedObjective == "moves_limit" && extraMovesOffer != null &&
+                        extraMovesOffer.extraMovesOnPurchase > 0 && !string.IsNullOrWhiteSpace(extraMovesOffer.productId));
+            }
+            else
+            {
+                if (endlessLossPanel != null) endlessLossPanel.SetActive(true);
+                else if (lossPanel != null)
+                {
+                    lossPanel.SetActive(true);
+                    if (buyExtraMovesButton != null) buyExtraMovesButton.gameObject.SetActive(false);
+                }
+            }
             Refresh();
         }
 
         public void HideLoss()
         {
-            lossPanel.SetActive(false);
-            game.playPanel.SetActive(true);
+            if (lossPanel != null) lossPanel.SetActive(false);
+            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+            if (playPanel != null) playPanel.SetActive(true);
         }
 
         private void BuyExtraMoves()
@@ -98,20 +386,22 @@ namespace UI
             PowerUpStore.RequestPurchase(extraMovesOffer.productId);
         }
 
-        private void ActivatePreview()
+        public void ActivatePreview()
         {
-            if (game.ActivatePreview()) Refresh();
+            if (game != null && game.ActivatePreview()) Refresh();
         }
 
-        private void NextLevel()
+        public void NextLevel()
         {
+            if (session == null) return;
             LevelDefinition next = LevelCatalog.Next(session.Definition.levelNumber);
             if (next != null) LevelFlow.StartLevel(next.levelNumber);
         }
 
         private bool ShouldShowTutorial()
         {
-            return session.Definition.levelNumber == 1 &&
+            return session != null &&
+                   session.Definition.levelNumber == 1 &&
                    !session.Progress.firstLevelTutorialComplete &&
                    session.Definition.tutorialSteps != null && session.Definition.tutorialSteps.Count > 0 &&
                    tutorialPanel != null && tutorialLabel != null && tutorialNextButton != null;
@@ -119,8 +409,9 @@ namespace UI
 
         private void ShowTutorialStep()
         {
+            if (tutorialPanel == null || session == null) return;
             tutorialPanel.SetActive(true);
-            game.playPanel.SetActive(false);
+            if (playPanel != null) playPanel.SetActive(false);
             tutorialLabel.text = session.Definition.tutorialSteps[tutorialStep] +
                                  "\n\n" + (tutorialStep + 1) + " / " + session.Definition.tutorialSteps.Count;
             TMP_Text buttonLabel = tutorialNextButton.GetComponentInChildren<TMP_Text>();
@@ -128,8 +419,9 @@ namespace UI
                 buttonLabel.text = tutorialStep == session.Definition.tutorialSteps.Count - 1 ? "START" : "CONTINUE";
         }
 
-        private void AdvanceTutorial()
+        public void AdvanceTutorial()
         {
+            if (session == null) return;
             tutorialStep++;
             if (tutorialStep < session.Definition.tutorialSteps.Count)
             {
@@ -137,11 +429,15 @@ namespace UI
                 return;
             }
 
-            tutorialPanel.SetActive(false);
+            if (tutorialPanel != null) tutorialPanel.SetActive(false);
             session.CompleteFirstLevelTutorial();
-            game.state = GameController.GameState.play;
-            game.playPanel.SetActive(true);
+            if (game != null)
+            {
+                game.state = GameController.GameState.play;
+            }
+            if (playPanel != null) playPanel.SetActive(true);
             Refresh();
         }
     }
 }
+

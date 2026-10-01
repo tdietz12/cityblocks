@@ -1529,6 +1529,18 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1134057922}
   m_CullTransparentMesh: 1
+--- !u!114 &1134057930
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1134057922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a7d1fe9cbf934a1288ff0e54d5621177, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::StoreMenuButton
 --- !u!1001 &1189097085
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2404,6 +2416,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e657e63142078804fa9cdbccb872834e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  endlessUnlockLevel: 3
 --- !u!1001 &1703534840
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2597,6 +2610,19 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 1778882798}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &1900000000
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: a58a88bb490445cf9336a215aac50d0c, type: 3}
 --- !u!1001 &1951110591
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2785,6 +2811,34 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 2062342174}
   m_PrefabAsset: {fileID: 0}
+--- !u!1001 &2900000010
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 8566587590973405823, guid: 27419501edb64cc781604d5f3b7b2a90,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8566587590973405823, guid: 27419501edb64cc781604d5f3b7b2a90,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8566587590973405823, guid: 27419501edb64cc781604d5f3b7b2a90,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 27419501edb64cc781604d5f3b7b2a90, type: 3}
 --- !u!33 &130650185475978025
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -4453,55 +4507,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!1001 &1900000000
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications: []
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: a58a88bb490445cf9336a215aac50d0c, type: 3}
---- !u!224 &1900000001 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 8566587590973405823, guid: a58a88bb490445cf9336a215aac50d0c, type: 3}
-  m_PrefabInstance: {fileID: 1900000000}
-  m_PrefabAsset: {fileID: 0}
-
---- !u!114 &1134057930
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1134057922}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a7d1fe9cbf934a1288ff0e54d5621177, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::StoreMenuButton
---- !u!1001 &2900000010
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications: []
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 27419501edb64cc781604d5f3b7b2a90, type: 3}
---- !u!224 &2900000011 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 8566587590973405823, guid: 27419501edb64cc781604d5f3b7b2a90, type: 3}
-  m_PrefabInstance: {fileID: 2900000010}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -4512,5 +4517,5 @@ SceneRoots:
   - {fileID: 1508876226}
   - {fileID: 1071120935}
   - {fileID: 1523253219}
-  - {fileID: 1900000001}
-  - {fileID: 2900000011}
+  - {fileID: 1900000000}
+  - {fileID: 2900000010}
