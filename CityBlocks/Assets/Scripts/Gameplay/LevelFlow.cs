@@ -32,7 +32,12 @@ namespace Gameplay
         public static bool Continue()
         {
             LevelProgressData progress = LevelProgressStore.Load();
-            return StartLevel(progress.activeRun != null ? progress.activeRun.levelNumber : progress.highestUnlockedLevel);
+            int target = progress.activeRun != null ? progress.activeRun.levelNumber : progress.highestUnlockedLevel;
+            if (LevelCatalog.Get(target) == null && LevelCatalog.Levels != null && LevelCatalog.Levels.Count > 0)
+            {
+                target = LevelCatalog.Levels[LevelCatalog.Levels.Count - 1].levelNumber;
+            }
+            return StartLevel(target);
         }
 
         public static void GoToMenu()
