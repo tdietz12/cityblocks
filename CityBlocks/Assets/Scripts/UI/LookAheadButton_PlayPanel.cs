@@ -22,13 +22,23 @@ namespace UI
         private void Refresh()
         {
             int uses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
-            if (button != null) button.interactable = uses > 0;
-            if (label != null) label.text = "LOOK AHEAD (" + uses + ")";
+            bool inEffect = game != null && game.LookAheadTurnsRemaining > 0;
+            if (button != null) button.interactable = uses > 0 && !inEffect;
+            if (label != null)
+            {
+                label.text = inEffect
+                    ? "LOOK AHEAD (" + game.LookAheadTurnsRemaining + ")"
+                    : "LOOK AHEAD (" + uses + ")";
+            }
         }
 
         public void ButtonPress()
         {
-            if (game != null) game.TryBeginPowerUp(GameController.PowerUpType.lookAhead);
+            if (game != null)
+            {
+                game.ActivateLookAhead();
+                Refresh();
+            }
         }
     }
 }

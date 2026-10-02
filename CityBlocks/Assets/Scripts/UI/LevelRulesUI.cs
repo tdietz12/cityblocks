@@ -25,8 +25,6 @@ namespace UI
         [SerializeField] private TMP_Text levelUpPowerUpLabel;
         [SerializeField] private Button lookAheadPowerUpButton;
         [SerializeField] private TMP_Text lookAheadPowerUpLabel;
-        [SerializeField] private Button previewButton;
-        [SerializeField] private TMP_Text previewLabel;
 
         [Header("Start / Pause Menu")]
         [SerializeField] private GameObject startPanel;
@@ -100,7 +98,6 @@ namespace UI
             if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
 
             if (movesLabel != null) movesLabel.gameObject.SetActive(false);
-            if (previewButton != null) previewButton.gameObject.SetActive(false);
             if (winPanel != null) winPanel.SetActive(false);
             if (lossPanel != null) lossPanel.SetActive(false);
             if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
@@ -137,7 +134,6 @@ namespace UI
             RegisterListeners();
 
             if (movesLabel != null) movesLabel.gameObject.SetActive(true);
-            if (previewButton != null) previewButton.gameObject.SetActive(true);
             if (winPanel != null) winPanel.SetActive(false);
             if (lossPanel != null) lossPanel.SetActive(false);
             if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
@@ -190,8 +186,7 @@ namespace UI
 
             if (deletePowerUpButton != null) deletePowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.delete));
             if (levelUpPowerUpButton != null) levelUpPowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.levelUp));
-            if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.lookAhead));
-            if (previewButton != null) previewButton.onClick.AddListener(ActivatePreview);
+            if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.onClick.AddListener(ActivateLookAhead);
 
             if (continueLevelUpButton != null) continueLevelUpButton.onClick.AddListener(ContinueFromLevelUp);
 
@@ -233,6 +228,12 @@ namespace UI
         public void TryUsePowerUp(GameController.PowerUpType type)
         {
             if (game == null) return;
+            if (type == GameController.PowerUpType.lookAhead)
+            {
+                ActivateLookAhead();
+                return;
+            }
+
             if (game.TryBeginPowerUp(type))
             {
                 if (playPanel != null) playPanel.SetActive(false);
@@ -243,9 +244,6 @@ namespace UI
                         break;
                     case GameController.PowerUpType.levelUp:
                         if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(true);
-                        break;
-                    case GameController.PowerUpType.lookAhead:
-                        if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(true);
                         break;
                 }
             }
@@ -292,24 +290,9 @@ namespace UI
                     : "MOVES: ∞";
             }
 
-            if (previewButton != null)
+            if (lookAheadPowerUpButton != null)
             {
-                if (session != null)
-                {
-                    previewButton.gameObject.SetActive(true);
-                    previewButton.interactable = !game.PreviewUsed &&
-                                                 game.state == GameController.GameState.play;
-                    if (previewLabel != null)
-                    {
-                        previewLabel.text = game.PreviewTurnsRemaining > 0
-                            ? "SHOW 3: " + game.PreviewTurnsRemaining + " TURNS"
-                            : game.PreviewUsed ? "SHOW 3: USED" : "SHOW 3: 3 TURNS";
-                    }
-                }
-                else
-                {
-                    previewButton.gameObject.SetActive(false);
-                }
+                lookAheadPowerUpButton.gameObject.SetActive(true);
             }
 
             RefreshPowerUps();
@@ -329,8 +312,16 @@ namespace UI
             if (levelUpPowerUpLabel != null) levelUpPowerUpLabel.text = "LVL UP (" + levelUpUses + ")";
 
             int lookAheadUses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
-            if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.interactable = canUse && lookAheadUses > 0;
-            if (lookAheadPowerUpLabel != null) lookAheadPowerUpLabel.text = "LOOK AHEAD (" + lookAheadUses + ")";
+            if (lookAheadPowerUpButton != null)
+            {
+                lookAheadPowerUpButton.interactable = canUse && lookAheadUses > 0 && game.LookAheadTurnsRemaining <= 0;
+            }
+            if (lookAheadPowerUpLabel != null)
+            {
+                lookAheadPowerUpLabel.text = game.LookAheadTurnsRemaining > 0
+                    ? "LOOK AHEAD (" + game.LookAheadTurnsRemaining + ")"
+                    : "LOOK AHEAD (" + lookAheadUses + ")";
+            }
         }
 
         private void Update()
@@ -386,10 +377,12 @@ namespace UI
             PowerUpStore.RequestPurchase(extraMovesOffer.productId);
         }
 
-        public void ActivatePreview()
+        public void ActivateLookAhead()
         {
-            if (game != null && game.ActivatePreview()) Refresh();
+            if (game != null && game.ActivateLookAhead()) Refresh();
         }
+
+        public void ActivatePreview() => ActivateLookAhead();
 
         public void NextLevel()
         {

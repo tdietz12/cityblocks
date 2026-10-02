@@ -16,8 +16,8 @@ namespace Gameplay
         public int firstInQueue;
         public int nextInQueue;
         public int thirdInQueue;
-        public int previewTurnsRemaining;
-        public bool previewUsed;
+        public int lookAheadTurnsRemaining;
+        public bool lookAheadUsed;
         public List<Vector3> board = new List<Vector3>();
         public bool obstacleStateInitialized;
         public List<ObstacleSaveData> obstacles = new List<ObstacleSaveData>();

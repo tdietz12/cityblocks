@@ -74,7 +74,7 @@ namespace Gameplay
             };
             game.Load(save, new ProgressionData());
             game.ConfigureLevel(definition, run.queueIndex, run.thirdInQueue,
-                run.previewTurnsRemaining, run.previewUsed);
+                run.lookAheadTurnsRemaining, run.lookAheadUsed);
             game.grid.Load(save, new ProgressionData());
             if (!run.obstacleStateInitialized)
             {
@@ -119,8 +119,8 @@ namespace Gameplay
             run.movesRemaining = MovesRemaining;
             run.queueIndex = game.QueueIndex;
             game.GetQueueLevels(out run.firstInQueue, out run.nextInQueue, out run.thirdInQueue);
-            run.previewTurnsRemaining = game.PreviewTurnsRemaining;
-            run.previewUsed = game.PreviewUsed;
+            run.lookAheadTurnsRemaining = game.LookAheadTurnsRemaining;
+            run.lookAheadUsed = game.LookAheadUsed;
             run.board = game.grid.CaptureBoardState();
             run.obstacles = game.grid.CaptureObstacles();
             run.obstacleStateInitialized = true;

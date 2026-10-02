@@ -54,10 +54,10 @@ namespace Gameplay
         public bool QueueReady => queue != null && queue.towerQueue.Count >= 2;
         public bool IsResolvingMove => moveResolving;
         private int savedThirdInQueue;
-        private int previewTurnsRemaining;
-        private bool previewUsed;
-        public int PreviewTurnsRemaining => previewTurnsRemaining;
-        public bool PreviewUsed => previewUsed;
+        private int lookAheadTurnsRemaining;
+        private bool lookAheadUsed;
+        public int LookAheadTurnsRemaining => lookAheadTurnsRemaining;
+        public bool LookAheadUsed => lookAheadUsed;
         public int TotalMoves { get; private set; }
         public int EndlessAttemptNumber { get; private set; }
         private bool endlessFinished;
@@ -65,6 +65,10 @@ namespace Gameplay
         public bool TryBeginPowerUp(PowerUpType type)
         {
             if (state != GameState.play || moveResolving || PowerUpStore.Uses(type) <= 0) return false;
+            if (type == PowerUpType.lookAhead)
+            {
+                return ActivateLookAhead();
+            }
             powerUp = type;
             state = GameState.powerUp;
             return true;
@@ -97,14 +101,14 @@ namespace Gameplay
         }
 
         public void ConfigureLevel(LevelDefinition definition, int nextQueueIndex, int thirdQueueLevel,
-            int savedPreviewTurns, bool savedPreviewUsed)
+            int savedLookAheadTurns, bool savedLookAheadUsed)
         {
             levelDefinition = definition;
             queueIndex = Mathf.Max(0, nextQueueIndex);
             savedThirdInQueue = thirdQueueLevel;
-            previewTurnsRemaining = Mathf.Max(0, savedPreviewTurns);
-            previewUsed = savedPreviewUsed;
-            queue.visibleCount = previewTurnsRemaining > 0 ? 3 : 2;
+            lookAheadTurnsRemaining = Mathf.Max(0, savedLookAheadTurns);
+            lookAheadUsed = savedLookAheadUsed;
+            queue.visibleCount = lookAheadTurnsRemaining > 0 ? 3 : 2;
         }
 
         public void GetQueueLevels(out int first, out int next, out int third)
@@ -114,14 +118,23 @@ namespace Gameplay
             third = queue.towerQueue.Count > 2 ? queue.towerQueue[2].GetComponent<TowerController>().level : 0;
         }
 
-        public bool ActivatePreview()
+        public bool ActivateLookAhead()
         {
-            if (levelDefinition == null || previewUsed || state != GameState.play || moveResolving) return false;
-            if (levelDefinition.moveLimit > 0 && LevelFlow.ActiveSession != null &&
+            if (state != GameState.play || moveResolving || lookAheadTurnsRemaining > 0) return false;
+            if (levelDefinition != null && levelDefinition.moveLimit > 0 && LevelFlow.ActiveSession != null &&
                 LevelFlow.ActiveSession.MovesRemaining <= 0) return false;
-            previewUsed = true;
-            previewTurnsRemaining = 3;
+            if (PowerUpStore.Uses(PowerUpType.lookAhead) <= 0) return false;
+            if (!PowerUpStore.TryUse(PowerUpType.lookAhead)) return false;
+
+            powerUp = PowerUpType.lookAhead;
+            RecordBoosterUse();
+            lookAheadUsed = true;
+            lookAheadTurnsRemaining = 3;
             queue.visibleCount = 3;
+            while (queue.towerQueue.Count < 3)
+            {
+                AddTowerToQueue(GetNextQueueLevel());
+            }
             LevelFlow.ActiveSession?.SaveRun();
             return true;
         }
@@ -152,8 +165,7 @@ namespace Gameplay
                 AddTowerToQueue(GetNextQueueLevel());
                 AddTowerToQueue(GetNextQueueLevel());
             }
-            if (levelDefinition != null)
-                AddTowerToQueue(savedThirdInQueue > 0 ? savedThirdInQueue : GetNextQueueLevel());
+            AddTowerToQueue(savedThirdInQueue > 0 ? savedThirdInQueue : GetNextQueueLevel());
 
             state = GameState.start;
             if (levelDefinition == null && LevelFlow.ActiveSession == null)
@@ -257,28 +269,8 @@ namespace Gameplay
 
                     if (powerUp == PowerUpType.lookAhead)
                     {
-                        /*
-                        bool hasTower = false;
-                        for (int column = 0; column < grid.totalColumns; column++)
-                            if (grid.grid[column, row] != null) { hasTower = true; break; }
-                        if (!hasTower || !PowerUpStore.TryUse(powerUp)) return;
-                        RecordBoosterUse();
-                        for (int columnInThisRow = 0; columnInThisRow < grid.totalColumns; columnInThisRow++)
-                        {
-                            if (grid.grid[columnInThisRow, row] != null)
-                            {
-                                GameObject removed = grid.grid[columnInThisRow, row];
-                                grid.grid[columnInThisRow, row] = null;
-                                Destroy(removed);
-                            }
-
-                            grid.ResolveGravity(columnInThisRow);
-                        }
-*/
-
-
                         playPanel.SetActive(true);
-                        powerUpPanel_LookAhead.SetActive(false);
+                        if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
                     }
 
                     if (powerUp == PowerUpType.levelUp)
@@ -344,7 +336,7 @@ namespace Gameplay
 
         private void RecordBoosterUse()
         {
-            string id = powerUp == PowerUpType.lookAhead ? "delete_row" : powerUp.ToString();
+            string id = powerUp == PowerUpType.lookAhead ? "look_ahead" : powerUp.ToString();
             bool endless = LevelFlow.ActiveSession == null;
             int currentLevel = endless ? level : LevelFlow.ActiveSession.Definition.levelNumber;
             int attempt = endless ? EndlessAttemptNumber : LevelFlow.ActiveSession.AttemptNumber;
@@ -399,11 +391,11 @@ namespace Gameplay
             if (LevelFlow.ActiveSession != null)
             {
                 LevelFlow.ActiveSession.RecordMove();
-                if (previewTurnsRemaining > 0)
-                {
-                    previewTurnsRemaining--;
-                    if (previewTurnsRemaining == 0) queue.visibleCount = 2;
-                }
+            }
+            if (lookAheadTurnsRemaining > 0)
+            {
+                lookAheadTurnsRemaining--;
+                if (lookAheadTurnsRemaining == 0) queue.visibleCount = 2;
             }
             StartCoroutine(SaveLevelAfterMove());
         }
@@ -505,6 +497,9 @@ namespace Gameplay
             level = 0;
             firstInQueue = 0;
             nextInQueue = 0;
+            lookAheadTurnsRemaining = 0;
+            lookAheadUsed = false;
+            if (queue != null) queue.visibleCount = 2;
         }
     }
 }
