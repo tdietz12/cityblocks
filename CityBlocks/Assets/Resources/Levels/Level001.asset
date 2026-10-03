@@ -14,18 +14,32 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::LevelDefinition
   levelNumber: 1
   difficulty: 0
-  columns: 4
-  rows: 6
+  columns: 3
+  rows: 3
   unavailableCells: []
-  startingBlocks: []
-  queue: []
-  randomMaximumLevel: 6
-  moveLimit: 0
+  startingBlocks:
+  - column: 1
+    row: 0
+    towerLevel: 1
+  obstacles: []
+  queue:
+  - type: 0
+    exactLevel: 1
+    minimumLevel: 0
+    maximumLevel: 0
+  - type: 0
+    exactLevel: 2
+    minimumLevel: 0
+    maximumLevel: 0
+  - type: 0
+    exactLevel: 2
+    minimumLevel: 0
+    maximumLevel: 0
+  randomMaximumLevel: 3
+  moveLimit: 5
   objectives:
   - type: 0
-    target: 7
+    target: 3
   tutorialSteps:
   - Drop a block into any column.
-  - Match equal tower levels side by side to merge them and grow your tower.
-  - Build a level 7 tower to complete this level.
   showAdAfterWin: 0

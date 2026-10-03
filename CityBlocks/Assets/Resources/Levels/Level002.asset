@@ -18,29 +18,30 @@ MonoBehaviour:
   rows: 3
   unavailableCells: []
   startingBlocks:
-  - column: 1
+  - column: 0
     row: 0
     towerLevel: 1
+  - column: 2
+    row: 0
+    towerLevel: 1
+  obstacles: []
   queue:
   - type: 0
     exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
+    minimumLevel: 0
+    maximumLevel: 0
   - type: 0
     exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
-  - type: 2
-    exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 2
-  - type: 1
-    exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
+    minimumLevel: 0
+    maximumLevel: 0
+  - type: 0
+    exactLevel: 2
+    minimumLevel: 0
+    maximumLevel: 0
   randomMaximumLevel: 3
-  moveLimit: 8
+  moveLimit: 5
   objectives:
   - type: 0
     target: 3
+  tutorialSteps: []
   showAdAfterWin: 0

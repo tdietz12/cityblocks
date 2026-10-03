@@ -13,51 +13,41 @@ MonoBehaviour:
   m_Name: Level003
   m_EditorClassIdentifier: Assembly-CSharp::LevelDefinition
   levelNumber: 3
-  difficulty: 1
-  columns: 4
+  difficulty: 0
+  columns: 3
   rows: 4
-  unavailableCells: []
-  startingBlocks:
-  - column: 0
-    row: 0
-    towerLevel: 1
-  obstacles:
-  - type: 0
-    column: 1
-    row: 0
-    durability: 1
-  - type: 2
-    column: 1
-    row: 1
-    durability: 1
-  - type: 1
-    column: 2
-    row: 0
-    durability: 1
-  - type: 0
-    column: 3
-    row: 1
-    durability: 4
+  unavailableCells:
+  - {x: 0, y: 0}
+  - {x: 0, y: 1}
+  - {x: 0, y: 2}
+  - {x: 0, y: 3}
+  - {x: 2, y: 0}
+  - {x: 2, y: 1}
+  - {x: 2, y: 2}
+  - {x: 2, y: 3}
+  startingBlocks: []
+  obstacles: []
   queue:
   - type: 0
-    exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
+    exactLevel: 3
+    minimumLevel: 0
+    maximumLevel: 0
+  - type: 0
+    exactLevel: 2
+    minimumLevel: 0
+    maximumLevel: 0
   - type: 0
     exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
+    minimumLevel: 0
+    maximumLevel: 0
   - type: 0
     exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
-  - type: 0
-    exactLevel: 1
-    minimumLevel: 1
-    maximumLevel: 6
+    minimumLevel: 0
+    maximumLevel: 0
   randomMaximumLevel: 3
-  moveLimit: 12
+  moveLimit: 5
   objectives:
   - type: 0
     target: 4
+  tutorialSteps: []
   showAdAfterWin: 0
