@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace Data_Persistence
 {
-    public class FileHandler : MonoBehaviour
+    public class FileHandler
     {
         private string fileDirectory = "";
         private string saveGameDataFileName = "";

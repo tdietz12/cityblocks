@@ -52,7 +52,7 @@ namespace Gameplay
             else if (merge) StartCoroutine(Merge());
         }
 
-        private void DisplayTowerForCurrentLevel(int towerLevel)
+        internal void DisplayTowerForCurrentLevel(int towerLevel)
         {
             if (currentTowerPrefab != null) Destroy(currentTowerPrefab);
             GameObject prefab = Resources.Load<GameObject>(towerLevel.ToString());

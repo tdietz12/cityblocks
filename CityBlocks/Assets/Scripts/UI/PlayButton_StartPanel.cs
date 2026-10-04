@@ -9,9 +9,16 @@ namespace UI
 
         public void ButtonPress()
         {
-            game.state = GameController.GameState.play;
-            LevelRulesUI rulesUI = FindAnyObjectByType<LevelRulesUI>();
-            if (rulesUI != null) rulesUI.Refresh();
+            LevelRulesUI rulesUI = LevelRulesUI.Instance ?? FindAnyObjectByType<LevelRulesUI>();
+            if (rulesUI != null)
+            {
+                rulesUI.StartGame();
+            }
+            else
+            {
+                if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
+                if (game != null) game.state = GameController.GameState.play;
+            }
         }
     }
 }

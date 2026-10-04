@@ -7,7 +7,15 @@ namespace UI
     {
         public void ButtonPress()
         {
-            LevelFlow.GoToMenu();
+            LevelRulesUI rulesUI = LevelRulesUI.Instance ?? FindAnyObjectByType<LevelRulesUI>();
+            if (rulesUI != null)
+            {
+                rulesUI.ReturnToMenu();
+            }
+            else
+            {
+                LevelFlow.GoToMenu();
+            }
         }
     }
 }

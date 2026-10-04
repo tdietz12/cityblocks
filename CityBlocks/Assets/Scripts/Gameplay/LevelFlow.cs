@@ -1,3 +1,4 @@
+using Data_Persistence;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -44,14 +45,20 @@ namespace Gameplay
         {
             if (ActiveSession != null)
             {
+                // Discard level progress as requested when exiting back to main menu from a level
                 ActiveSession.ExitToMenu();
-                ActiveSession.SaveRun();
             }
             else if (SceneManager.GetActiveScene().name == "EndlessMode")
             {
                 GameController game = Object.FindAnyObjectByType<GameController>();
                 if (game != null && game.state != GameController.GameState.lose && game.state != GameController.GameState.win)
+                {
                     LevelAnalytics.EndlessQuit(game.level, game.EndlessAttemptNumber, game.TotalMoves);
+                    if (DataPersistenceController.instance != null)
+                    {
+                        DataPersistenceController.instance.SaveGame();
+                    }
+                }
             }
             ActiveSession = null;
             requestedLevel = 0;

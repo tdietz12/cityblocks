@@ -218,30 +218,97 @@ namespace Gameplay
             return new Vector3(column + offset.x, offset.y, totalRows - 2 - row + offset.z);
         }
 
+        private List<GameObject> instantiatedCells = new List<GameObject>();
+
         public void Load(GameSaveData gameSaveData, ProgressionData progressionData)
         {
+            if (game == null)
+            {
+                game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            }
+
             GenerateNewGrid();
-            LoadBoardState(gameSaveData.boardState);
+            if (gameSaveData != null)
+            {
+                bool isLevel = LevelFlow.ActiveSession != null || LevelFlow.IsLevelMode;
+                bool hasSavedBoard = gameSaveData.boardState != null && gameSaveData.boardState.Count > 0;
+                if (isLevel || gameSaveData.hasActiveRun || hasSavedBoard)
+                {
+                    LoadBoardState(gameSaveData.boardState);
+                }
+            }
+            CaptureBoardState(); // refresh the intact snapshot with the loaded board
         }
 
         public void Save(ref GameSaveData gameSaveData, ref ProgressionData progressionData)
         {
+            if (gameSaveData == null) gameSaveData = new GameSaveData();
             gameSaveData.boardState = CaptureBoardState();
         }
+
+        // Last board snapshot captured while every tower was still alive. Used when a save is
+        // requested during scene teardown (towers already destroyed) so the saved board isn't wiped.
+        private List<Vector3> lastIntactBoardState = new List<Vector3>();
+        private bool isTearingDown;
+
+        private void OnDisable() { isTearingDown = true; }
+        private void OnEnable() { isTearingDown = false; }
 
         public List<Vector3> CaptureBoardState()
         {
             List<Vector3> state = new List<Vector3>();
-            if (grid == null) return state;
+            if (grid == null || isTearingDown) return new List<Vector3>(lastIntactBoardState);
             for (int column = 0; column < totalColumns; column++)
             for (int row = 0; row < totalRows; row++)
-                if (grid[column, row] != null)
-                    state.Add(new Vector3(column, row, grid[column, row].GetComponent<TowerController>().level));
+            {
+                GameObject cellTower = grid[column, row];
+                if (!ReferenceEquals(cellTower, null) && cellTower == null)
+                {
+                    // Tower destroyed while still referenced by the grid: the scene is unloading.
+                    return new List<Vector3>(lastIntactBoardState);
+                }
+                if (cellTower != null)
+                {
+                    TowerController tc = cellTower.GetComponent<TowerController>();
+                    if (tc != null)
+                    {
+                        state.Add(new Vector3(column, row, tc.level));
+                    }
+                }
+            }
+            lastIntactBoardState = new List<Vector3>(state);
             return state;
         }
 
         private void GenerateNewGrid()
         {
+            if (instantiatedCells != null)
+            {
+                for (int i = instantiatedCells.Count - 1; i >= 0; i--)
+                {
+                    if (instantiatedCells[i] != null)
+                    {
+                        Destroy(instantiatedCells[i]);
+                    }
+                }
+                instantiatedCells.Clear();
+            }
+
+            if (grid != null)
+            {
+                for (int column = 0; column < totalColumns; column++)
+                {
+                    for (int row = 0; row < totalRows; row++)
+                    {
+                        if (grid[column, row] != null)
+                        {
+                            Destroy(grid[column, row]);
+                            grid[column, row] = null;
+                        }
+                    }
+                }
+            }
+
             grid = new GameObject[totalColumns, totalRows];
             obstacles = new BoardObstacle[totalColumns, totalRows];
             for (int column = 0; column < totalColumns; column++)
@@ -254,6 +321,7 @@ namespace Gameplay
                     cellComponent.col = column;
                     cellComponent.row = row;
                     cellComponent.onCellHitEvent += GetCellHit;
+                    instantiatedCells.Add(newCell);
                 }
             }
         }
@@ -261,6 +329,16 @@ namespace Gameplay
         private void LoadBoardState(List<Vector3> state)
         {
             if (state == null) return;
+            if (game == null)
+            {
+                game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            }
+            if (game == null || game.tower == null)
+            {
+                Debug.LogError("Cannot LoadBoardState: game or game.tower is null.");
+                return;
+            }
+
             foreach (Vector3 block in state)
             {
                 int column = (int)block.x;
@@ -285,6 +363,7 @@ namespace Gameplay
                 tower.col = column;
                 tower.row = row;
                 tower.drop = spawnRow;
+                tower.DisplayTowerForCurrentLevel(tower.level);
             }
         }
 

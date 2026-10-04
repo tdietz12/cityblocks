@@ -1,3 +1,4 @@
+using Data_Persistence;
 using Gameplay;
 using TMPro;
 using UnityEngine;
@@ -6,6 +7,10 @@ using UnityEngine.UI;
 
 namespace UI
 {
+    /// <summary>
+    /// Manages the in-game UI overlay for both Campaign (LevelSession) and Endless modes.
+    /// Controls HUD labels, power-up buttons, menu flow, win/loss popups, and the first-level tutorial.
+    /// </summary>
     public class LevelRulesUI : MonoBehaviour
     {
         public static LevelRulesUI Instance { get; private set; }
@@ -64,6 +69,7 @@ namespace UI
         private bool isBound;
         private bool listenersRegistered;
 
+        public bool IsBound => isBound;
         public bool IsLevelMode => session != null || LevelFlow.IsLevelMode;
         public LevelSession Session => session;
         public GameController Game => game;
@@ -75,15 +81,16 @@ namespace UI
 
         private void Start()
         {
-            if (game == null)
-            {
-                game = GameController.instance ?? FindAnyObjectByType<GameController>();
-            }
-
+            EnsureGameControllerReference();
             RegisterListeners();
 
             if (!LevelFlow.IsLevelMode)
             {
+                // Ensure endless save data has been loaded before setting up UI
+                if (DataPersistenceController.instance != null && !DataPersistenceController.instance.HasLoaded)
+                {
+                    DataPersistenceController.instance.LoadGame();
+                }
                 InitializeEndlessMode();
             }
             else if (session == null && LevelFlow.ActiveSession != null)
@@ -92,81 +99,80 @@ namespace UI
             }
         }
 
+        private void Update()
+        {
+            // Continuously update button interactability and remaining booster count labels
+            RefreshPowerUps();
+        }
+
+        /// <summary>
+        /// Sets up the UI for endless mode gameplay (hiding level-specific elements like move limits).
+        /// </summary>
         public void InitializeEndlessMode()
         {
             session = null;
-            if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            EnsureGameControllerReference();
+
+            if (DataPersistenceController.instance != null && !DataPersistenceController.instance.HasLoaded)
+            {
+                DataPersistenceController.instance.LoadGame();
+            }
+
+            HideAllOverlayPanels();
 
             if (movesLabel != null) movesLabel.gameObject.SetActive(false);
-            if (winPanel != null) winPanel.SetActive(false);
-            if (lossPanel != null) lossPanel.SetActive(false);
-            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
-            if (tutorialPanel != null) tutorialPanel.SetActive(false);
-            if (levelUpPanel != null) levelUpPanel.SetActive(false);
-            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
-            if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
-            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
-
             if (scorePanel != null) scorePanel.SetActive(true);
 
-            if (game != null && game.state == GameController.GameState.play)
+            if (game != null && game.state == GameController.GameState.lose)
             {
-                if (startPanel != null) startPanel.SetActive(false);
-                if (playPanel != null) playPanel.SetActive(true);
+                ShowLoss();
             }
             else
             {
-                if (startPanel != null) startPanel.SetActive(true);
-                if (playPanel != null) playPanel.SetActive(false);
-            }
+                UpdatePlayOrStartPanels();
 
-            if (playButtonLabel != null) playButtonLabel.text = "PLAY";
+                if (playButtonLabel != null)
+                {
+                    playButtonLabel.text = (game != null && game.HasActiveRun) ? "RESUME" : "PLAY";
+                }
+            }
 
             isBound = true;
             Refresh();
         }
 
+        /// <summary>
+        /// Binds an active Campaign level session and game controller to this UI.
+        /// </summary>
         public void Bind(LevelSession levelSession, GameController gameController)
         {
             session = levelSession;
             game = gameController;
 
             RegisterListeners();
+            HideAllOverlayPanels();
 
             if (movesLabel != null) movesLabel.gameObject.SetActive(true);
-            if (winPanel != null) winPanel.SetActive(false);
-            if (lossPanel != null) lossPanel.SetActive(false);
-            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
-            if (levelUpPanel != null) levelUpPanel.SetActive(false);
-            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
-            if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
-            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
-
-            if (buyExtraMovesButton != null)
-                buyExtraMovesButton.gameObject.SetActive(extraMovesOffer != null &&
-                                                         extraMovesOffer.extraMovesOnPurchase > 0 && !string.IsNullOrWhiteSpace(extraMovesOffer.productId));
-            if (tutorialPanel != null) tutorialPanel.SetActive(false);
-
             if (scorePanel != null) scorePanel.SetActive(true);
+
+            // Configure optional IAP button for purchasing additional moves
+            if (buyExtraMovesButton != null)
+            {
+                bool hasOffer = extraMovesOffer != null &&
+                                extraMovesOffer.extraMovesOnPurchase > 0 &&
+                                !string.IsNullOrWhiteSpace(extraMovesOffer.productId);
+                buyExtraMovesButton.gameObject.SetActive(hasOffer);
+            }
 
             if (ShouldShowTutorial())
             {
-                if (startPanel != null) startPanel.SetActive(false);
-                if (playPanel != null) playPanel.SetActive(false);
+                SetPanelActive(startPanel, false);
+                SetPanelActive(playPanel, false);
                 ShowTutorialStep();
             }
             else
             {
-                if (game != null && game.state == GameController.GameState.play)
-                {
-                    if (startPanel != null) startPanel.SetActive(false);
-                    if (playPanel != null) playPanel.SetActive(true);
-                }
-                else
-                {
-                    if (startPanel != null) startPanel.SetActive(true);
-                    if (playPanel != null) playPanel.SetActive(false);
-                }
+                UpdatePlayOrStartPanels();
             }
 
             if (playButtonLabel != null) playButtonLabel.text = "PLAY";
@@ -175,21 +181,28 @@ namespace UI
             Refresh();
         }
 
+        /// <summary>
+        /// Registers all button click event listeners once.
+        /// </summary>
         private void RegisterListeners()
         {
             if (listenersRegistered) return;
             listenersRegistered = true;
 
+            // Header & Menu buttons
             if (playButton != null) playButton.onClick.AddListener(StartGame);
             if (startBackButton != null) startBackButton.onClick.AddListener(ReturnToMenu);
             if (pauseButton != null) pauseButton.onClick.AddListener(PauseGame);
 
+            // Power-up activation buttons
             if (deletePowerUpButton != null) deletePowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.delete));
             if (levelUpPowerUpButton != null) levelUpPowerUpButton.onClick.AddListener(() => TryUsePowerUp(GameController.PowerUpType.levelUp));
             if (lookAheadPowerUpButton != null) lookAheadPowerUpButton.onClick.AddListener(ActivateLookAhead);
 
+            // Endless mode level up continue
             if (continueLevelUpButton != null) continueLevelUpButton.onClick.AddListener(ContinueFromLevelUp);
 
+            // Win / Loss buttons
             if (nextLevelButton != null) nextLevelButton.onClick.AddListener(NextLevel);
             if (winMenuButton != null) winMenuButton.onClick.AddListener(ReturnToMenu);
             if (retryButton != null) retryButton.onClick.AddListener(Retry);
@@ -197,37 +210,58 @@ namespace UI
             if (buyExtraMovesButton != null) buyExtraMovesButton.onClick.AddListener(BuyExtraMoves);
             if (endlessLossBackButton != null) endlessLossBackButton.onClick.AddListener(ReturnToMenu);
 
+            // Tutorial
             if (tutorialNextButton != null) tutorialNextButton.onClick.AddListener(AdvanceTutorial);
         }
 
+        /// <summary>
+        /// Starts or resumes the game from the pause/start overlay.
+        /// </summary>
         public void StartGame()
         {
             if (game != null) game.state = GameController.GameState.play;
-            if (startPanel != null) startPanel.SetActive(false);
-            if (playPanel != null) playPanel.SetActive(true);
+            SetPanelActive(startPanel, false);
+            SetPanelActive(playPanel, true);
             Refresh();
         }
 
+        /// <summary>
+        /// Pauses the game and reveals the start/pause menu with a RESUME label.
+        /// </summary>
         public void PauseGame()
         {
             if (game != null) game.state = GameController.GameState.start;
-            if (playPanel != null) playPanel.SetActive(false);
-            if (startPanel != null) startPanel.SetActive(true);
+            SetPanelActive(playPanel, false);
+            SetPanelActive(startPanel, true);
             if (playButtonLabel != null) playButtonLabel.text = "RESUME";
+
+            // In endless mode, save when entering the pause menu
+            if (!IsLevelMode && DataPersistenceController.instance != null)
+            {
+                DataPersistenceController.instance.SaveGame();
+            }
+
             Refresh();
         }
 
+        /// <summary>
+        /// Dismisses the endless level up milestone screen and returns to active gameplay.
+        /// </summary>
         public void ContinueFromLevelUp()
         {
-            if (levelUpPanel != null) levelUpPanel.SetActive(false);
-            if (playPanel != null) playPanel.SetActive(true);
+            SetPanelActive(levelUpPanel, false);
+            SetPanelActive(playPanel, true);
             if (game != null) game.state = GameController.GameState.play;
             Refresh();
         }
 
+        /// <summary>
+        /// Initiates the selected power-up mode or look-ahead display.
+        /// </summary>
         public void TryUsePowerUp(GameController.PowerUpType type)
         {
             if (game == null) return;
+
             if (type == GameController.PowerUpType.lookAhead)
             {
                 ActivateLookAhead();
@@ -236,19 +270,22 @@ namespace UI
 
             if (game.TryBeginPowerUp(type))
             {
-                if (playPanel != null) playPanel.SetActive(false);
+                SetPanelActive(playPanel, false);
                 switch (type)
                 {
                     case GameController.PowerUpType.delete:
-                        if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(true);
+                        SetPanelActive(powerUpPanel_Delete, true);
                         break;
                     case GameController.PowerUpType.levelUp:
-                        if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(true);
+                        SetPanelActive(powerUpPanel_LevelUp, true);
                         break;
                 }
             }
         }
 
+        /// <summary>
+        /// Returns to the main menu scene, notifying the active session or saving/resetting endless values.
+        /// </summary>
         public void ReturnToMenu()
         {
             if (session != null)
@@ -257,11 +294,28 @@ namespace UI
             }
             else
             {
-                if (game != null) game.ResetValuesOnLoss();
+                if (game != null && game.state == GameController.GameState.lose)
+                {
+                    game.ResetValuesOnLoss();
+                    if (DataPersistenceController.instance != null)
+                    {
+                        DataPersistenceController.instance.SaveGame();
+                    }
+                }
+                else
+                {
+                    if (DataPersistenceController.instance != null)
+                    {
+                        DataPersistenceController.instance.SaveGame();
+                    }
+                }
                 LevelFlow.GoToMenu();
             }
         }
 
+        /// <summary>
+        /// Retries the current level or restarts Endless mode.
+        /// </summary>
         public void Retry()
         {
             if (session != null)
@@ -271,13 +325,20 @@ namespace UI
             else
             {
                 if (game != null) game.ResetValuesOnLoss();
+                if (DataPersistenceController.instance != null)
+                {
+                    DataPersistenceController.instance.SaveGame();
+                }
                 SceneManager.LoadScene("EndlessMode");
             }
         }
 
+        /// <summary>
+        /// Refreshes all HUD texts: scores, moves remaining, and power-up buttons.
+        /// </summary>
         public void Refresh()
         {
-            if (game == null) game = GameController.instance ?? FindAnyObjectByType<GameController>();
+            EnsureGameControllerReference();
             if (game == null) return;
 
             if (scoreText != null) scoreText.text = game.score.ToString();
@@ -295,100 +356,167 @@ namespace UI
                 lookAheadPowerUpButton.gameObject.SetActive(true);
             }
 
+            if (playButtonLabel != null && !IsLevelMode)
+            {
+                playButtonLabel.text = (game != null && game.HasActiveRun) ? "RESUME" : "PLAY";
+            }
+
             RefreshPowerUps();
         }
 
+        /// <summary>
+        /// Updates the state and badge counts on all power-up buttons based on player inventory and current game state.
+        /// </summary>
         private void RefreshPowerUps()
         {
             if (game == null) return;
             bool canUse = game.state == GameController.GameState.play && !game.IsResolvingMove;
 
+            // Delete Power-up
             int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);
-            if (deletePowerUpButton != null) deletePowerUpButton.interactable = canUse && deleteUses > 0;
-            if (deletePowerUpLabel != null) deletePowerUpLabel.text = "DELETE (" + deleteUses + ")";
+            UpdateButtonState(deletePowerUpButton, deletePowerUpLabel, canUse && deleteUses > 0, "DELETE (" + deleteUses + ")");
 
+            // Level Up Power-up
             int levelUpUses = PowerUpStore.Uses(GameController.PowerUpType.levelUp);
-            if (levelUpPowerUpButton != null) levelUpPowerUpButton.interactable = canUse && levelUpUses > 0;
-            if (levelUpPowerUpLabel != null) levelUpPowerUpLabel.text = "LVL UP (" + levelUpUses + ")";
+            UpdateButtonState(levelUpPowerUpButton, levelUpPowerUpLabel, canUse && levelUpUses > 0, "LVL UP (" + levelUpUses + ")");
 
+            // Look Ahead Power-up
             int lookAheadUses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
-            if (lookAheadPowerUpButton != null)
-            {
-                lookAheadPowerUpButton.interactable = canUse && lookAheadUses > 0 && game.LookAheadTurnsRemaining <= 0;
-            }
-            if (lookAheadPowerUpLabel != null)
-            {
-                lookAheadPowerUpLabel.text = game.LookAheadTurnsRemaining > 0
-                    ? "LOOK AHEAD (" + game.LookAheadTurnsRemaining + ")"
-                    : "LOOK AHEAD (" + lookAheadUses + ")";
-            }
+            bool canUseLookAhead = canUse && lookAheadUses > 0 && game.LookAheadTurnsRemaining <= 0;
+            string lookAheadText = game.LookAheadTurnsRemaining > 0
+                ? "LOOK AHEAD (" + game.LookAheadTurnsRemaining + ")"
+                : "LOOK AHEAD (" + lookAheadUses + ")";
+            UpdateButtonState(lookAheadPowerUpButton, lookAheadPowerUpLabel, canUseLookAhead, lookAheadText);
         }
 
-        private void Update()
-        {
-            RefreshPowerUps();
-        }
-
+        /// <summary>
+        /// Displays the level win popup panel.
+        /// </summary>
         public void ShowWin()
         {
-            if (winPanel != null) winPanel.SetActive(true);
-            if (playPanel != null) playPanel.SetActive(false);
+            SetPanelActive(winPanel, true);
+            SetPanelActive(playPanel, false);
+
             if (nextLevelButton != null && session != null)
+            {
                 nextLevelButton.interactable = LevelCatalog.Next(session.Definition.levelNumber) != null;
+            }
+
             Refresh();
         }
 
+        /// <summary>
+        /// Displays the level or endless loss popup panel.
+        /// </summary>
         public void ShowLoss()
         {
-            if (playPanel != null) playPanel.SetActive(false);
+            SetPanelActive(playPanel, false);
+
             if (session != null)
             {
-                if (lossPanel != null) lossPanel.SetActive(true);
-                if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+                SetPanelActive(lossPanel, true);
+                SetPanelActive(endlessLossPanel, false);
+
                 if (buyExtraMovesButton != null)
-                    buyExtraMovesButton.gameObject.SetActive(
-                        session.PendingFailedObjective == "moves_limit" && extraMovesOffer != null &&
-                        extraMovesOffer.extraMovesOnPurchase > 0 && !string.IsNullOrWhiteSpace(extraMovesOffer.productId));
+                {
+                    bool canBuyMoves = session.PendingFailedObjective == "moves_limit" &&
+                                       extraMovesOffer != null &&
+                                       extraMovesOffer.extraMovesOnPurchase > 0 &&
+                                       !string.IsNullOrWhiteSpace(extraMovesOffer.productId);
+                    buyExtraMovesButton.gameObject.SetActive(canBuyMoves);
+                }
             }
             else
             {
-                if (endlessLossPanel != null) endlessLossPanel.SetActive(true);
+                if (endlessLossPanel != null)
+                {
+                    endlessLossPanel.SetActive(true);
+                }
                 else if (lossPanel != null)
                 {
                     lossPanel.SetActive(true);
                     if (buyExtraMovesButton != null) buyExtraMovesButton.gameObject.SetActive(false);
                 }
             }
+
             Refresh();
         }
 
+        /// <summary>
+        /// Hides loss panels and restores the active play panel (e.g. after purchasing extra moves).
+        /// </summary>
         public void HideLoss()
         {
-            if (lossPanel != null) lossPanel.SetActive(false);
-            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
-            if (playPanel != null) playPanel.SetActive(true);
+            SetPanelActive(lossPanel, false);
+            SetPanelActive(endlessLossPanel, false);
+            SetPanelActive(playPanel, true);
         }
 
+        /// <summary>
+        /// Initiates the IAP purchase flow for extra moves during a moves-exhausted loss state.
+        /// </summary>
         private void BuyExtraMoves()
         {
             if (session == null || !session.AwaitingFailureDecision || extraMovesOffer == null ||
                 extraMovesOffer.extraMovesOnPurchase <= 0) return;
+
             LevelAnalytics.CheckoutStarted(extraMovesOffer.productId, extraMovesOffer.priceValue, extraMovesOffer.currencyCode);
             PowerUpStore.RequestPurchase(extraMovesOffer.productId);
         }
 
+        /// <summary>
+        /// Activates the Look Ahead preview booster.
+        /// </summary>
         public void ActivateLookAhead()
         {
-            if (game != null && game.ActivateLookAhead()) Refresh();
+            if (game != null && game.ActivateLookAhead())
+            {
+                Refresh();
+            }
         }
 
+        /// <summary>
+        /// Alias for ActivateLookAhead.
+        /// </summary>
         public void ActivatePreview() => ActivateLookAhead();
 
+        /// <summary>
+        /// Loads the next campaign level.
+        /// </summary>
         public void NextLevel()
         {
             if (session == null) return;
             LevelDefinition next = LevelCatalog.Next(session.Definition.levelNumber);
-            if (next != null) LevelFlow.StartLevel(next.levelNumber);
+            if (next != null)
+            {
+                LevelFlow.StartLevel(next.levelNumber);
+            }
+        }
+
+        /// <summary>
+        /// Advances through the first-level step-by-step tutorial cards or finishes it and begins play.
+        /// </summary>
+        public void AdvanceTutorial()
+        {
+            if (session == null) return;
+            tutorialStep++;
+
+            if (tutorialStep < session.Definition.tutorialSteps.Count)
+            {
+                ShowTutorialStep();
+                return;
+            }
+
+            SetPanelActive(tutorialPanel, false);
+            session.CompleteFirstLevelTutorial();
+
+            if (game != null)
+            {
+                game.state = GameController.GameState.play;
+            }
+
+            SetPanelActive(playPanel, true);
+            Refresh();
         }
 
         private bool ShouldShowTutorial()
@@ -396,40 +524,69 @@ namespace UI
             return session != null &&
                    session.Definition.levelNumber == 1 &&
                    !session.Progress.firstLevelTutorialComplete &&
-                   session.Definition.tutorialSteps != null && session.Definition.tutorialSteps.Count > 0 &&
-                   tutorialPanel != null && tutorialLabel != null && tutorialNextButton != null;
+                   session.Definition.tutorialSteps != null &&
+                   session.Definition.tutorialSteps.Count > 0 &&
+                   tutorialPanel != null &&
+                   tutorialLabel != null &&
+                   tutorialNextButton != null;
         }
 
         private void ShowTutorialStep()
         {
             if (tutorialPanel == null || session == null) return;
+
             tutorialPanel.SetActive(true);
-            if (playPanel != null) playPanel.SetActive(false);
+            SetPanelActive(playPanel, false);
+
             tutorialLabel.text = session.Definition.tutorialSteps[tutorialStep] +
                                  "\n\n" + (tutorialStep + 1) + " / " + session.Definition.tutorialSteps.Count;
+
             TMP_Text buttonLabel = tutorialNextButton.GetComponentInChildren<TMP_Text>();
             if (buttonLabel != null)
+            {
                 buttonLabel.text = tutorialStep == session.Definition.tutorialSteps.Count - 1 ? "START" : "CONTINUE";
+            }
         }
 
-        public void AdvanceTutorial()
+        private void EnsureGameControllerReference()
         {
-            if (session == null) return;
-            tutorialStep++;
-            if (tutorialStep < session.Definition.tutorialSteps.Count)
+            if (game == null)
             {
-                ShowTutorialStep();
-                return;
+                game = GameController.instance ?? FindAnyObjectByType<GameController>();
             }
+        }
 
-            if (tutorialPanel != null) tutorialPanel.SetActive(false);
-            session.CompleteFirstLevelTutorial();
-            if (game != null)
+        private void HideAllOverlayPanels()
+        {
+            SetPanelActive(winPanel, false);
+            SetPanelActive(lossPanel, false);
+            SetPanelActive(endlessLossPanel, false);
+            SetPanelActive(tutorialPanel, false);
+            SetPanelActive(levelUpPanel, false);
+            SetPanelActive(powerUpPanel_Delete, false);
+            SetPanelActive(powerUpPanel_LookAhead, false);
+            SetPanelActive(powerUpPanel_LevelUp, false);
+        }
+
+        private void UpdatePlayOrStartPanels()
+        {
+            bool isPlaying = game != null && game.state == GameController.GameState.play;
+            SetPanelActive(startPanel, !isPlaying);
+            SetPanelActive(playPanel, isPlaying);
+        }
+
+        private static void SetPanelActive(GameObject panel, bool active)
+        {
+            if (panel != null)
             {
-                game.state = GameController.GameState.play;
+                panel.SetActive(active);
             }
-            if (playPanel != null) playPanel.SetActive(true);
-            Refresh();
+        }
+
+        private static void UpdateButtonState(Button button, TMP_Text label, bool interactable, string labelText)
+        {
+            if (button != null) button.interactable = interactable;
+            if (label != null) label.text = labelText;
         }
     }
 }

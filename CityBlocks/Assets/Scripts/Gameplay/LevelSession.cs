@@ -16,6 +16,7 @@ namespace Gameplay
         private bool finished;
         private bool initialized;
         private bool awaitingFailureDecision;
+        private bool discardRunOnExit;
         private string pendingFailedObjective;
 
         public bool AwaitingFailureDecision => awaitingFailureDecision;
@@ -110,7 +111,7 @@ namespace Gameplay
 
         public void SaveRun()
         {
-            if (!initialized || finished || game == null || game.grid == null ||
+            if (discardRunOnExit || !initialized || finished || game == null || game.grid == null ||
                 !game.QueueReady || game.IsResolvingMove) return;
             LevelRunData run = Progress.activeRun;
             if (run == null) return;
@@ -194,7 +195,14 @@ namespace Gameplay
 
         public void ReturnToMenu()
         {
+            discardRunOnExit = true;
             if (awaitingFailureDecision) FinalizeFailure();
+            if (Progress != null && Progress.activeRun != null)
+            {
+                Progress.activeRun = null;
+                LevelProgressStore.Save(Progress);
+            }
+
             if (game != null && game.state == GameController.GameState.win && Definition.showAdAfterWin)
                 UnityAdsProvider.ShowBeforeReturningToMenu(Definition.levelNumber, LevelFlow.GoToMenu);
             else LevelFlow.GoToMenu();
@@ -202,6 +210,7 @@ namespace Gameplay
 
         public void ExitToMenu()
         {
+            discardRunOnExit = true;
             if (awaitingFailureDecision)
             {
                 FinalizeFailure();
@@ -209,6 +218,13 @@ namespace Gameplay
             }
             if (!initialized || finished) return;
             LevelAnalytics.LevelQuit(Definition.levelNumber, AttemptNumber);
+
+            // User requirement: if exiting from a level back to main menu, do not save progress in the level.
+            if (Progress != null && Progress.activeRun != null)
+            {
+                Progress.activeRun = null;
+                LevelProgressStore.Save(Progress);
+            }
         }
 
         public bool ObjectivesMet()
@@ -253,6 +269,13 @@ namespace Gameplay
         }
 
         private void OnApplicationQuit() { SaveRun(); }
-        private void OnDisable() { SaveRun(); LevelFlow.ClearSession(this); }
+        private void OnDisable()
+        {
+            if (!discardRunOnExit && !finished)
+            {
+                SaveRun();
+            }
+            LevelFlow.ClearSession(this);
+        }
     }
 }
