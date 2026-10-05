@@ -16,6 +16,19 @@ MonoBehaviour:
   difficulty: 0
   columns: 3
   rows: 3
+  grid:
+  - cells:
+    - 1
+    - 
+    - 1
+  - cells:
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
   unavailableCells: []
   startingBlocks:
   - column: 0

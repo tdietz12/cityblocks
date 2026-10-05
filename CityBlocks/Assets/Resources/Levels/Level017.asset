@@ -16,17 +16,53 @@ MonoBehaviour:
   difficulty: 1
   columns: 6
   rows: 5
+  grid:
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - Fixed Breakable
+    - 
+    - Fixed Breakable 2
+    - Fixed Breakable
+    - 
+    - Fixed Breakable
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
   unavailableCells: []
   startingBlocks: []
   obstacles:
   - type: 0
-    column: 2
-    row: 2
-    durability: 2
-  - type: 0
     column: 0
     row: 2
     durability: 1
+  - type: 0
+    column: 2
+    row: 2
+    durability: 2
   - type: 0
     column: 3
     row: 2
@@ -43,4 +79,5 @@ MonoBehaviour:
     target: 5
   - type: 1
     target: 205
+  tutorialSteps: []
   showAdAfterWin: 0

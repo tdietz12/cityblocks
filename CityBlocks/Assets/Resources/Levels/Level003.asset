@@ -16,17 +16,58 @@ MonoBehaviour:
   difficulty: 0
   columns: 3
   rows: 4
-  unavailableCells:
-  - {x: 0, y: 0}
-  - {x: 0, y: 1}
-  - {x: 0, y: 2}
-  - {x: 0, y: 3}
-  - {x: 2, y: 0}
-  - {x: 2, y: 1}
-  - {x: 2, y: 2}
-  - {x: 2, y: 3}
+  grid:
+  - cells:
+    - Fixed Unbreakable
+    - 
+    - Fixed Unbreakable
+  - cells:
+    - Fixed Unbreakable
+    - 
+    - Fixed Unbreakable
+  - cells:
+    - Fixed Unbreakable
+    - 
+    - Fixed Unbreakable
+  - cells:
+    - Fixed Unbreakable
+    - 
+    - Fixed Unbreakable
+  unavailableCells: []
   startingBlocks: []
-  obstacles: []
+  obstacles:
+  - type: 1
+    column: 0
+    row: 0
+    durability: 0
+  - type: 1
+    column: 2
+    row: 0
+    durability: 0
+  - type: 1
+    column: 0
+    row: 1
+    durability: 0
+  - type: 1
+    column: 2
+    row: 1
+    durability: 0
+  - type: 1
+    column: 0
+    row: 2
+    durability: 0
+  - type: 1
+    column: 2
+    row: 2
+    durability: 0
+  - type: 1
+    column: 0
+    row: 3
+    durability: 0
+  - type: 1
+    column: 2
+    row: 3
+    durability: 0
   queue:
   - type: 0
     exactLevel: 3

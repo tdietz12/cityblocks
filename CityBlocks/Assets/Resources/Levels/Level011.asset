@@ -16,17 +16,52 @@ MonoBehaviour:
   difficulty: 1
   columns: 6
   rows: 6
+  grid:
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - Fixed Breakable
+    - 
+    - Fixed Breakable
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
+    - Fixed Breakable
+    - 
+    - Fixed Breakable
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
+  - cells:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
   unavailableCells: []
   startingBlocks: []
   obstacles:
-  - type: 0
-    column: 5
-    row: 3
-    durability: 1
-  - type: 0
-    column: 3
-    row: 3
-    durability: 1
   - type: 0
     column: 0
     row: 2
@@ -34,6 +69,14 @@ MonoBehaviour:
   - type: 0
     column: 2
     row: 2
+    durability: 1
+  - type: 0
+    column: 3
+    row: 3
+    durability: 1
+  - type: 0
+    column: 5
+    row: 3
     durability: 1
   queue: []
   randomMaximumLevel: 6
@@ -43,4 +86,5 @@ MonoBehaviour:
     target: 5
   - type: 1
     target: 175
+  tutorialSteps: []
   showAdAfterWin: 0
