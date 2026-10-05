@@ -47,6 +47,7 @@ namespace UI
         [SerializeField] private Button continueLevelUpButton;
         [SerializeField] private GameObject endlessLossPanel;
         [SerializeField] private Button endlessLossBackButton;
+        [SerializeField] private Button endlessLossRetryButton;
 
         [Header("Win / Loss Panels")]
         [SerializeField] private GameObject winPanel;
@@ -211,6 +212,7 @@ namespace UI
             if (lossMenuButton != null) lossMenuButton.onClick.AddListener(ReturnToMenu);
             if (buyExtraMovesButton != null) buyExtraMovesButton.onClick.AddListener(BuyExtraMoves);
             if (endlessLossBackButton != null) endlessLossBackButton.onClick.AddListener(ReturnToMenu);
+            if (endlessLossRetryButton != null) endlessLossRetryButton.onClick.AddListener(Retry);
 
             // Tutorial
             if (tutorialNextButton != null) tutorialNextButton.onClick.AddListener(AdvanceTutorial);
@@ -299,9 +301,13 @@ namespace UI
                 if (game != null && game.state == GameController.GameState.lose)
                 {
                     game.ResetValuesOnLoss();
+                    if (game.grid != null)
+                    {
+                        game.grid.ClearBoard();
+                    }
                     if (DataPersistenceController.instance != null)
                     {
-                        DataPersistenceController.instance.SaveGame();
+                        DataPersistenceController.instance.ClearSavedGame();
                     }
                 }
                 else
@@ -326,10 +332,17 @@ namespace UI
             }
             else
             {
-                if (game != null) game.ResetValuesOnLoss();
+                if (game != null)
+                {
+                    game.ResetValuesOnLoss();
+                    if (game.grid != null)
+                    {
+                        game.grid.ClearBoard();
+                    }
+                }
                 if (DataPersistenceController.instance != null)
                 {
-                    DataPersistenceController.instance.SaveGame();
+                    DataPersistenceController.instance.ClearSavedGame();
                 }
                 SceneManager.LoadScene("EndlessMode");
             }
@@ -413,12 +426,11 @@ namespace UI
         public void ShowLoss()
         {
             SetPanelActive(playPanel, false);
+            SetPanelActive(endlessLossPanel, false);
+            SetPanelActive(lossPanel, true);
 
             if (session != null)
             {
-                SetPanelActive(lossPanel, true);
-                SetPanelActive(endlessLossPanel, false);
-
                 if (buyExtraMovesButton != null)
                 {
                     bool canBuyMoves = session.PendingFailedObjective == "moves_limit" &&
@@ -430,14 +442,9 @@ namespace UI
             }
             else
             {
-                if (endlessLossPanel != null)
+                if (buyExtraMovesButton != null)
                 {
-                    endlessLossPanel.SetActive(true);
-                }
-                else if (lossPanel != null)
-                {
-                    lossPanel.SetActive(true);
-                    if (buyExtraMovesButton != null) buyExtraMovesButton.gameObject.SetActive(false);
+                    buyExtraMovesButton.gameObject.SetActive(false);
                 }
             }
 

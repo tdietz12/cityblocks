@@ -18,14 +18,13 @@ namespace Gameplay
         internal GameObject[,] grid;
         private BoardObstacle[,] obstacles;
         internal int totalColumns = 4;
-        internal int totalRows = 7; // Includes the temporary spawn row.
-        [SerializeField] private Vector2 boardCenter = new Vector2(2f, 3f);
+        internal int totalRows = 6; // Includes the temporary spawn row.
+
+
+        private Vector2 boardCenter = new Vector2(0f, 0f);
 
         /// <summary>World-space origin for the configured board, centered on the street backdrop.</summary>
-        public Vector3 WorldOffset => transform.position + new Vector3(
-            boardCenter.x - (totalColumns - 1) * 0.5f,
-            0f,
-            boardCenter.y - (totalRows - 2) * 0.5f);
+        public Vector3 WorldOffset => transform.position + new Vector3(0, 0, 0);
 
         private bool[,] available;
         public List<GameObject> towersInPlay = new List<GameObject>();
@@ -34,15 +33,15 @@ namespace Gameplay
         {
             if (towersInPlay.Count > 0 || grid == null) return false;
             for (int column = 0; column < totalColumns; column++)
-            for (int row = 0; row < totalRows; row++)
-            {
-                if (obstacles != null && obstacles[column, row] != null &&
-                    obstacles[column, row].IsMoving) return false;
-                GameObject block = grid[column, row];
-                if (block == null) continue;
-                TowerController tower = block.GetComponent<TowerController>();
-                if (tower.drop || tower.merge) return false;
-            }
+                for (int row = 0; row < totalRows; row++)
+                {
+                    if (obstacles != null && obstacles[column, row] != null &&
+                        obstacles[column, row].IsMoving) return false;
+                    GameObject block = grid[column, row];
+                    if (block == null) continue;
+                    TowerController tower = block.GetComponent<TowerController>();
+                    if (tower.drop || tower.merge) return false;
+                }
             return true;
         }
 
@@ -59,8 +58,8 @@ namespace Gameplay
             totalRows = Mathf.Clamp(definition.rows, 3, 7) + 1;
             available = new bool[totalColumns, totalRows - 1];
             for (int column = 0; column < totalColumns; column++)
-            for (int row = 0; row < totalRows - 1; row++)
-                available[column, row] = definition.IsAvailable(column, row);
+                for (int row = 0; row < totalRows - 1; row++)
+                    available[column, row] = definition.IsAvailable(column, row);
         }
 
         public bool IsAvailable(int column, int row)
@@ -104,16 +103,18 @@ namespace Gameplay
             List<ObstacleSaveData> state = new List<ObstacleSaveData>();
             if (obstacles == null) return state;
             for (int column = 0; column < totalColumns; column++)
-            for (int row = 0; row < totalRows - 1; row++)
-            {
-                BoardObstacle obstacle = obstacles[column, row];
-                if (obstacle == null) continue;
-                state.Add(new ObstacleSaveData
+                for (int row = 0; row < totalRows - 1; row++)
                 {
-                    type = obstacle.Type, column = column, row = row,
-                    durability = obstacle.Durability
-                });
-            }
+                    BoardObstacle obstacle = obstacles[column, row];
+                    if (obstacle == null) continue;
+                    state.Add(new ObstacleSaveData
+                    {
+                        type = obstacle.Type,
+                        column = column,
+                        row = row,
+                        durability = obstacle.Durability
+                    });
+                }
             return state;
         }
 
@@ -243,7 +244,38 @@ namespace Gameplay
         public void Save(ref GameSaveData gameSaveData, ref ProgressionData progressionData)
         {
             if (gameSaveData == null) gameSaveData = new GameSaveData();
+            if (game != null && !game.HasActiveRun)
+            {
+                gameSaveData.boardState = new List<Vector3>();
+                return;
+            }
             gameSaveData.boardState = CaptureBoardState();
+        }
+
+        /// <summary>
+        /// Clears all active towers on the grid and resets the intact board snapshot.
+        /// </summary>
+        public void ClearBoard()
+        {
+            lastIntactBoardState.Clear();
+            if (grid != null)
+            {
+                for (int column = 0; column < totalColumns; column++)
+                {
+                    for (int row = 0; row < totalRows; row++)
+                    {
+                        if (grid[column, row] != null)
+                        {
+                            Destroy(grid[column, row]);
+                            grid[column, row] = null;
+                        }
+                    }
+                }
+            }
+            if (towersInPlay != null)
+            {
+                towersInPlay.Clear();
+            }
         }
 
         // Last board snapshot captured while every tower was still alive. Used when a save is
@@ -259,23 +291,23 @@ namespace Gameplay
             List<Vector3> state = new List<Vector3>();
             if (grid == null || isTearingDown) return new List<Vector3>(lastIntactBoardState);
             for (int column = 0; column < totalColumns; column++)
-            for (int row = 0; row < totalRows; row++)
-            {
-                GameObject cellTower = grid[column, row];
-                if (!ReferenceEquals(cellTower, null) && cellTower == null)
+                for (int row = 0; row < totalRows; row++)
                 {
-                    // Tower destroyed while still referenced by the grid: the scene is unloading.
-                    return new List<Vector3>(lastIntactBoardState);
-                }
-                if (cellTower != null)
-                {
-                    TowerController tc = cellTower.GetComponent<TowerController>();
-                    if (tc != null)
+                    GameObject cellTower = grid[column, row];
+                    if (!ReferenceEquals(cellTower, null) && cellTower == null)
                     {
-                        state.Add(new Vector3(column, row, tc.level));
+                        // Tower destroyed while still referenced by the grid: the scene is unloading.
+                        return new List<Vector3>(lastIntactBoardState);
+                    }
+                    if (cellTower != null)
+                    {
+                        TowerController tc = cellTower.GetComponent<TowerController>();
+                        if (tc != null)
+                        {
+                            state.Add(new Vector3(column, row, tc.level));
+                        }
                     }
                 }
-            }
             lastIntactBoardState = new List<Vector3>(state);
             return state;
         }

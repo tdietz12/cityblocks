@@ -86,6 +86,33 @@ namespace Data_Persistence
             }
         }
 
+        /// <summary>
+        /// Clears the saved active run and board state, immediately persisting the clean empty run to disk.
+        /// </summary>
+        public void ClearSavedGame()
+        {
+            if (this.gameSaveData == null)
+            {
+                this.gameSaveData = new GameSaveData();
+            }
+            this.gameSaveData.hasActiveRun = false;
+            this.gameSaveData.score = 0;
+            this.gameSaveData.level = 0;
+            this.gameSaveData.isLost = false;
+            this.gameSaveData.boardState = new List<Vector3>();
+            this.gameSaveData.firstInQueue = 0;
+            this.gameSaveData.nextInQueue = 0;
+            this.gameSaveData.thirdInQueue = 0;
+            this.gameSaveData.lookAheadTurnsRemaining = 0;
+            this.gameSaveData.lookAheadUsed = false;
+
+            if (fileHandler == null)
+            {
+                fileHandler = new FileHandler(Application.persistentDataPath, saveGameFileName, progressionDataFileName);
+            }
+            fileHandler.Save(gameSaveData, progressionData);
+        }
+
         public void SaveGame()
         {
             if (fileHandler == null)
@@ -114,6 +141,11 @@ namespace Data_Persistence
         {
             if (fileHandler != null && !LevelFlow.IsLevelMode)
             {
+                if (gameSaveData != null && !gameSaveData.hasActiveRun)
+                {
+                    fileHandler.Save(gameSaveData, progressionData);
+                    return;
+                }
                 SaveGame();
             }
         }

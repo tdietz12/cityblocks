@@ -232,7 +232,7 @@ namespace Gameplay
                 // but it still returns its last intact snapshot instead of an empty board.
                 var capturedBoard = !ReferenceEquals(grid, null) ? grid.CaptureBoardState() : null;
                 bool hasBoardPieces = capturedBoard != null && capturedBoard.Count > 0;
-                bool shouldSaveRun = hasActiveRun || score > 0 || level > 0 || hasBoardPieces;
+                bool shouldSaveRun = hasActiveRun && (score > 0 || level > 0 || hasBoardPieces);
 
                 if (shouldSaveRun)
                 {
@@ -736,6 +736,11 @@ namespace Gameplay
             savedThirdInQueue = 0;
             lookAheadTurnsRemaining = 0;
             lookAheadUsed = false;
+            state = GameState.start;
+            if (grid != null)
+            {
+                grid.ClearBoard();
+            }
             if (queue != null) queue.visibleCount = 2;
         }
 

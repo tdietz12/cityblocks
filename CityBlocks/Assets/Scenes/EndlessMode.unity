@@ -721,7 +721,6 @@ MonoBehaviour:
     type: 3}
   fallingObstaclePrefab: {fileID: 6246114139131348982, guid: 64a8ba863bb443f8a84d4b87d5700373,
     type: 3}
-  boardCenter: {x: 2, y: 3}
   towersInPlay: []
 --- !u!4 &1796936686
 Transform:
