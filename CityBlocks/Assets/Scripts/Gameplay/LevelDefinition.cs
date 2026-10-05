@@ -57,7 +57,7 @@ namespace Gameplay
         [Min(1)] public int randomMaximumLevel = 6;
         [Min(0)] public int moveLimit;
         public List<LevelObjective> objectives = new List<LevelObjective>();
-        [TextArea(2, 4)] public List<string> tutorialSteps = new List<string>();
+        public List<GameObject> tutorialSteps = new List<GameObject>();
         public bool showAdAfterWin;
 
         public bool IsAvailable(int column, int row)

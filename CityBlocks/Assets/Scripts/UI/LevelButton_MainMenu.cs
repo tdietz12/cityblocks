@@ -23,15 +23,15 @@ namespace UI
             if (button != null) button.onClick.AddListener(ButtonPress);
 
             LevelProgressData progress = LevelProgressStore.Load();
-            if (!progress.firstLevelTutorialComplete && progress.completedLevels.Count == 0)
+            if (!progress.levelTutorialComplete && progress.completedLevels.Count == 0)
             {
                 int firstLevel = progress.activeRun != null ? progress.activeRun.levelNumber : 1;
                 LevelFlow.StartLevel(firstLevel);
                 return;
             }
-            else if (!progress.firstLevelTutorialComplete && progress.completedLevels.Contains(1))
+            else if (!progress.levelTutorialComplete && progress.completedLevels.Contains(1))
             {
-                progress.firstLevelTutorialComplete = true;
+                progress.levelTutorialComplete = true;
                 LevelProgressStore.Save(progress);
             }
 

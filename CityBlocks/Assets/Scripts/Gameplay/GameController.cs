@@ -67,6 +67,12 @@ namespace Gameplay
         public int TotalMoves { get; private set; }
         public int EndlessAttemptNumber { get; private set; }
 
+        // Tutorial / gameplay event hooks
+        public event System.Action<int> onTowerPlaced;
+        public event System.Action onMoveResolved;
+        public event System.Action<PowerUpType> onPowerUpUsed;
+        public System.Func<int, bool> PlacementFilter;
+
         private bool hasActiveRun;
         private int firstInQueue;
         private int nextInQueue;
@@ -102,7 +108,7 @@ namespace Gameplay
             UpdateScoreUI();
             InitializeTowerQueue();
 
-            if (state != GameState.lose)
+            if (state != GameState.lose && state != GameState.play)
             {
                 state = GameState.start;
             }
@@ -382,6 +388,8 @@ namespace Gameplay
 
             if (moveResolving || !grid.IsSettled() || queue.towerQueue.Count == 0) return;
 
+            if (PlacementFilter != null && !PlacementFilter(col)) return;
+
             int topRow = grid.TopPlayableRow(col);
             if (topRow < 0) return;
 
@@ -429,6 +437,7 @@ namespace Gameplay
                     break;
             }
 
+            onPowerUpUsed?.Invoke(powerUp);
             state = GameState.play;
         }
 
@@ -535,6 +544,8 @@ namespace Gameplay
                 }
             }
 
+            onTowerPlaced?.Invoke(column);
+
             StartCoroutine(SaveLevelAfterMove());
         }
 
@@ -546,6 +557,7 @@ namespace Gameplay
             yield return null;
             yield return new WaitUntil(grid.IsSettled);
             moveResolving = false;
+            onMoveResolved?.Invoke();
 
             if (LevelFlow.ActiveSession != null)
             {

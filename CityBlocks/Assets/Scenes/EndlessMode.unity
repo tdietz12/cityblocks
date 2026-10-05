@@ -1682,6 +1682,31 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -320
       objectReference: {fileID: 0}
+    - target: {fileID: 3435520468350355953, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_Color.a
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3435520468350355953, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_Color.b
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3435520468350355953, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_Color.g
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3435520468350355953, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_Color.r
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3435520468350355953, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 3546361964039482339, guid: 830523848cb7a491093ead95ccdee1bd,
         type: 3}
       propertyPath: m_SizeDelta.x
@@ -1701,6 +1726,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_AnchoredPosition.y
       value: 200
+      objectReference: {fileID: 0}
+    - target: {fileID: 3615380456084171384, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3928595079912223504, guid: 830523848cb7a491093ead95ccdee1bd,
         type: 3}
@@ -1887,6 +1917,11 @@ PrefabInstance:
       propertyPath: game
       value: 
       objectReference: {fileID: 1754403393}
+    - target: {fileID: 5904867134013147774, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5937925989367479206, guid: 830523848cb7a491093ead95ccdee1bd,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -1926,6 +1961,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_fontSizeBase
       value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 6378833574299509782, guid: 830523848cb7a491093ead95ccdee1bd,
+        type: 3}
+      propertyPath: m_fontColor32.rgba
+      value: 4294967295
       objectReference: {fileID: 0}
     - target: {fileID: 6757105213116494730, guid: 830523848cb7a491093ead95ccdee1bd,
         type: 3}

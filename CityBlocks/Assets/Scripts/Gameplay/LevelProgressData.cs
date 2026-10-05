@@ -38,7 +38,7 @@ namespace Gameplay
         public int highestUnlockedLevel = 1;
         public List<int> completedLevels = new List<int>();
         public LevelRunData activeRun;
-        public bool firstLevelTutorialComplete;
+        public bool levelTutorialComplete;
         public PowerUpInventory powerUps = new PowerUpInventory();
         public bool adsRemoved;
         public bool hasMadePurchase;

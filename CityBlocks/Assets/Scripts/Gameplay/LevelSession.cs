@@ -154,10 +154,10 @@ namespace Gameplay
             return true;
         }
 
-        public void CompleteFirstLevelTutorial()
+        public void CompleteLevelTutorial()
         {
-            if (Progress == null || Progress.firstLevelTutorialComplete) return;
-            Progress.firstLevelTutorialComplete = true;
+            if (Progress == null || Progress.levelTutorialComplete) return;
+            Progress.levelTutorialComplete = true;
             LevelProgressStore.Save(Progress);
         }
 

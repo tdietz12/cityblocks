@@ -60,6 +60,7 @@ namespace UI
 
         [Header("Tutorial")]
         [SerializeField] private GameObject tutorialPanel;
+        [SerializeField] private LevelTutorialController tutorialController;
         [SerializeField] private TMP_Text tutorialLabel;
         [SerializeField] private Button tutorialNextButton;
 
@@ -167,7 +168,8 @@ namespace UI
             if (ShouldShowTutorial())
             {
                 SetPanelActive(startPanel, false);
-                SetPanelActive(playPanel, false);
+                SetPanelActive(playPanel, true);
+                if (game != null) game.state = GameController.GameState.play;
                 ShowTutorialStep();
             }
             else
@@ -494,10 +496,16 @@ namespace UI
         }
 
         /// <summary>
-        /// Advances through the first-level step-by-step tutorial cards or finishes it and begins play.
+        /// Advances through the step-by-step tutorial cards or finishes it and begins play.
         /// </summary>
         public void AdvanceTutorial()
         {
+            if (tutorialController != null && tutorialController.IsTutorialActive)
+            {
+                tutorialController.AdvanceStep();
+                return;
+            }
+
             if (session == null) return;
             tutorialStep++;
 
@@ -508,7 +516,7 @@ namespace UI
             }
 
             SetPanelActive(tutorialPanel, false);
-            session.CompleteFirstLevelTutorial();
+            session.CompleteLevelTutorial();
 
             if (game != null)
             {
@@ -519,33 +527,63 @@ namespace UI
             Refresh();
         }
 
+        public void SetPlayPanelVisible(bool visible)
+        {
+            SetPanelActive(playPanel, visible);
+        }
+
+        public void OnTutorialCompleted()
+        {
+            SetPanelActive(tutorialPanel, false);
+            if (game != null)
+            {
+                game.state = GameController.GameState.play;
+            }
+            SetPanelActive(playPanel, true);
+            Refresh();
+        }
+
         private bool ShouldShowTutorial()
         {
             return session != null &&
-                   session.Definition.levelNumber == 1 &&
-                   !session.Progress.firstLevelTutorialComplete &&
+                   session.Definition != null &&
                    session.Definition.tutorialSteps != null &&
                    session.Definition.tutorialSteps.Count > 0 &&
-                   tutorialPanel != null &&
-                   tutorialLabel != null &&
-                   tutorialNextButton != null;
+                   session.Definition.tutorialSteps.Exists(step => step != null);
         }
 
         private void ShowTutorialStep()
         {
-            if (tutorialPanel == null || session == null) return;
+            if (session == null) return;
 
-            tutorialPanel.SetActive(true);
-            SetPanelActive(playPanel, false);
-
-            tutorialLabel.text = session.Definition.tutorialSteps[tutorialStep] +
-                                 "\n\n" + (tutorialStep + 1) + " / " + session.Definition.tutorialSteps.Count;
-
-            TMP_Text buttonLabel = tutorialNextButton.GetComponentInChildren<TMP_Text>();
-            if (buttonLabel != null)
+            if (tutorialController == null)
             {
-                buttonLabel.text = tutorialStep == session.Definition.tutorialSteps.Count - 1 ? "START" : "CONTINUE";
+                tutorialController = GetComponentInChildren<LevelTutorialController>(true);
             }
+
+            if (tutorialPanel != null)
+            {
+                tutorialPanel.SetActive(true);
+            }
+
+            if (game != null)
+            {
+                game.state = GameController.GameState.play;
+            }
+            SetPanelActive(playPanel, true);
+
+            if (tutorialController != null)
+            {
+                tutorialController.Initialize(this);
+                tutorialController.StartTutorial(session, game);
+                return;
+            }
+
+            // Fallback if tutorialController is not assigned
+            if (tutorialPanel == null) return;
+            GameObject currentTutorialPanel = Instantiate(session.Definition.tutorialSteps[tutorialStep], tutorialPanel.transform);
+            currentTutorialPanel.transform.SetParent(tutorialPanel.transform);
+            SetPanelActive(playPanel, true);
         }
 
         private void EnsureGameControllerReference()

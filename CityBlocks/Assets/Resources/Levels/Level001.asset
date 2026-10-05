@@ -41,5 +41,5 @@ MonoBehaviour:
   - type: 0
     target: 3
   tutorialSteps:
-  - Drop a block into any column.
+  - {fileID: 3468878906791932018, guid: 87fbd168c5c504a259f04cb1c9b75199, type: 3}
   showAdAfterWin: 0

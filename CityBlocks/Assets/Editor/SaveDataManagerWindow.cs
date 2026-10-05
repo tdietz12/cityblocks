@@ -129,7 +129,7 @@ namespace EditorTools
                 }
             }
 
-            data.firstLevelTutorialComplete = completeTutorial;
+            data.levelTutorialComplete = completeTutorial;
             data.activeRun = null;
 
             if (!resetPowerUps && existing != null && existing.powerUps != null)
@@ -212,7 +212,7 @@ namespace EditorTools
                 RefreshActiveUI();
             }
 
-            Debug.Log($"[SaveDataEditorMenu] Player set to Level {targetLevel}. (Highest unlocked: {data.highestUnlockedLevel}, Completed count: {data.completedLevels.Count}, Tutorial complete: {data.firstLevelTutorialComplete})");
+            Debug.Log($"[SaveDataEditorMenu] Player set to Level {targetLevel}. (Highest unlocked: {data.highestUnlockedLevel}, Completed count: {data.completedLevels.Count}, Tutorial complete: {data.levelTutorialComplete})");
 
             if (showDialog)
             {
@@ -225,7 +225,7 @@ namespace EditorTools
                     $"Player successfully set to Level {targetLevel}!\n\n" +
                     $"• Highest Unlocked: Level {targetLevel}\n" +
                     $"• Completed Levels: {completedText}\n" +
-                    $"• Tutorial Complete: {data.firstLevelTutorialComplete}\n" +
+                    $"• Tutorial Complete: {data.levelTutorialComplete}\n" +
                     $"• Endless Mode: {(data.completedLevels.Contains(3) ? "Unlocked" : "Locked (requires Level 3)")}",
                     "OK"
                 );
@@ -444,7 +444,7 @@ namespace EditorTools
                 : $"{data.completedLevels.Count} level(s)";
             EditorGUILayout.LabelField("Completed Levels:", completedSummary);
 
-            EditorGUILayout.LabelField("Tutorial Status:", data.firstLevelTutorialComplete ? "Completed" : "Not Completed (will launch tutorial)");
+            EditorGUILayout.LabelField("Tutorial Status:", data.levelTutorialComplete ? "Completed" : "Not Completed (will launch tutorial)");
 
             string activeRunSummary = data.activeRun != null && data.activeRun.levelNumber > 0
                 ? $"Level {data.activeRun.levelNumber} (in progress)"
