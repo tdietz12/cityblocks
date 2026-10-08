@@ -389,18 +389,18 @@ namespace UI
 
             // Delete Power-up
             int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);
-            UpdateButtonState(deletePowerUpButton, deletePowerUpLabel, canUse && deleteUses > 0, "DELETE (" + deleteUses + ")");
+            UpdateButtonState(deletePowerUpButton, deletePowerUpLabel, canUse && deleteUses > 0, deleteUses.ToString());
 
             // Level Up Power-up
             int levelUpUses = PowerUpStore.Uses(GameController.PowerUpType.levelUp);
-            UpdateButtonState(levelUpPowerUpButton, levelUpPowerUpLabel, canUse && levelUpUses > 0, "LVL UP (" + levelUpUses + ")");
+            UpdateButtonState(levelUpPowerUpButton, levelUpPowerUpLabel, canUse && levelUpUses > 0, levelUpUses.ToString());
 
             // Look Ahead Power-up
             int lookAheadUses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
             bool canUseLookAhead = canUse && lookAheadUses > 0 && game.LookAheadTurnsRemaining <= 0;
             string lookAheadText = game.LookAheadTurnsRemaining > 0
-                ? "LOOK AHEAD (" + game.LookAheadTurnsRemaining + ")"
-                : "LOOK AHEAD (" + lookAheadUses + ")";
+                ? game.LookAheadTurnsRemaining.ToString()
+                : lookAheadUses.ToString();
             UpdateButtonState(lookAheadPowerUpButton, lookAheadPowerUpLabel, canUseLookAhead, lookAheadText);
         }
 
