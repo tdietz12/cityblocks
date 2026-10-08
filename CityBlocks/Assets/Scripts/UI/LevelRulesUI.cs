@@ -361,9 +361,7 @@ namespace UI
 
             if (session != null && movesLabel != null)
             {
-                movesLabel.text = session.Definition.moveLimit > 0
-                    ? "MOVES: " + session.MovesRemaining
-                    : "MOVES: ∞";
+                movesLabel.text = session.MovesRemaining.ToString();
             }
 
             if (lookAheadPowerUpButton != null)
