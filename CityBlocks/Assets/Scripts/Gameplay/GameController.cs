@@ -670,6 +670,12 @@ namespace Gameplay
         /// </summary>
         private void AddTowerToQueue(int towerLevel)
         {
+            // Reroll invalid levels before creating the queued tower.
+            while (towerLevel < 1)
+            {
+                towerLevel = GetNextQueueLevel();
+            }
+
             Vector3 towerSpawnPosition = new Vector3(queue.transform.position.x - 5, queue.transform.position.y, queue.transform.position.z);
             GameObject newTower = Instantiate(tower, towerSpawnPosition, Quaternion.identity);
 
@@ -709,16 +715,27 @@ namespace Gameplay
         /// <summary>
         /// Generates a dynamic level range for spawns in Endless mode based on current progress.
         /// </summary>
+        internal static void GetEndlessSpawnBounds(int highestLevel, out int minimumLevel, out int maximumLevelExclusive)
+        {
+            maximumLevelExclusive = highestLevel > 10 ? highestLevel - 5 : 6;
+            minimumLevel = highestLevel > 10
+                ? maximumLevelExclusive - Mathf.RoundToInt(highestLevel / 2f)
+                : 1;
+        }
+
+        public int MinimumEndlessSpawnLevel
+        {
+            get
+            {
+                GetEndlessSpawnBounds(level, out int minimumLevel, out _);
+                return Mathf.Max(1, minimumLevel);
+            }
+        }
+
         private int GetTowerSpawnLevelRange()
         {
-            if (level > 10)
-            {
-                int towerLevelMax = level - 5;
-                int towerLevelMin = towerLevelMax - Mathf.RoundToInt(level / 2f);
-                return Random.Range(towerLevelMin, towerLevelMax);
-            }
-
-            return Random.Range(1, 6);
+            GetEndlessSpawnBounds(level, out int minimumLevel, out int maximumLevelExclusive);
+            return Random.Range(minimumLevel, maximumLevelExclusive);
         }
 
         /// <summary>

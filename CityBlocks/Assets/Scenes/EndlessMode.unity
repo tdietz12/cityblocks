@@ -2095,7 +2095,7 @@ MonoBehaviour:
     type: 3}
   _multiplierFlightDuration: 0.35
   _riseDuration: 0.3
-  _multipliedRiseDuration: 0.8
+  _multipliedRiseDuration: 0.6
   _flightDuration: 0.15
   _riseDistance: 45
   _worldHeightOffset: 0.7

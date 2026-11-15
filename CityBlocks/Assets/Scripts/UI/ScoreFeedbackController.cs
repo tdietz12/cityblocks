@@ -19,7 +19,7 @@ namespace UI
         private readonly Stack<MergeMultiplierToken> _tokenPool = new Stack<MergeMultiplierToken>();
         [Header("Timing")]
         [SerializeField, Min(0f)] private float _riseDuration = 0.3f;
-        [SerializeField, Min(0f)] private float _multipliedRiseDuration = 0.8f;
+        [SerializeField, Min(0f)] private float _multipliedRiseDuration = 0.6f;
         [SerializeField, Min(0f)] private float _flightDuration = 0.15f;
         [SerializeField, Min(0f)] private float _riseDistance = 45f;
         [SerializeField, Min(0f)] private float _worldHeightOffset = 0.7f;

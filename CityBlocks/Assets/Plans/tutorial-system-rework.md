@@ -613,3 +613,92 @@ Keep Legacy Input Manager controls, legal-placement validation, existing move li
 - **Layout/readability:** badge remains over the visible upper-right grid area for 3–7 row/column boards, holes/obstacles, camera fit/drift/punch, and small/tall portrait layouts. Token is clearly smaller than score popup; neither intercepts touches, overlaps important HUD elements, or clips on reset/pulse.
 - **Performance:** bounded pooled token reuse, shared font/materials, fixed popup font sizes, cached references, no new EventSystem or per-frame scene searches, and no needless whole-HUD rebuilds.
 - **Validation:** zero new compile errors; explicit deterministic/runtime results and visual analysis where available; no changes to user saves/progress or real monetization services as fixtures. State the limits of any blocked Play Mode or device verification.
+
+---
+
+# Endless Level-Up Board Cleanup — Current Requested Scope
+
+Implement only this extension. Preserve previous work, including rejection/reroll of queue levels below 1. Do not repeat older implementation steps.
+
+# Project Overview
+- Game Title: City Blocks.
+- High-Level Concept: A city-themed tower-merging puzzle. In Endless mode, advancing the highest achieved tower tier clears obsolete board towers below the current valid spawn minimum, freeing space for continued progression.
+- Players: Single player.
+- Inspiration / Reference Games: Existing project references 2048 and Triple Town; no new design direction.
+- Tone / Art Direction: Preserve existing colorful low-poly towers and motion.
+- Target Platform: iOS.
+- Screen Orientation / Resolution: Portrait; preserve existing layouts (prior reference 1080x1920).
+- Render Pipeline: URP-HighFidelity; Unity 6000.4.5f1.
+
+# Game Mechanics
+## Core Gameplay Loop
+Finish a placement or board-changing booster cascade. If that action increases the player's highest Endless tower level, remove board towers strictly below the valid spawn minimum, settle affected columns, and finish any resulting merges before resolving/saving the action.
+
+### Confirmed Behavior
+- User selected **After the current cascade** rather than immediate removal at each merge boundary. This preserves existing cascade rewards and readable cause-and-effect (MDA).
+- Valid minimum at highest achieved level L: `L <= 10 ? 1 : Mathf.Max(1, L - 5 - Mathf.RoundToInt(L / 2f))`. The clamp reflects the existing reroll rejection of nonpositive towers; do not use raw 0 at L=11.
+- Examples: L=12 minimum 1; L=13 minimum 2 (remove level-1 towers); L=17 minimum 4 (remove levels 1–3); L=20 minimum 5 (remove levels 1–4). Towers equal to the minimum survive.
+- Trigger on an actual increase of `game.level`, including booster-only increases that produce no merge. Upgrading a tower without exceeding the historical highest level does not trigger cleanup.
+- Campaign mode never performs this cleanup. Queue entries are not removed/rerolled for falling below the new spawn minimum; the existing queue floor-of-1 guard remains unchanged.
+- Removal itself grants no score, combo increment, obstacle damage, camera merge pulse, or additional move/booster consumption. Actual gravity-triggered merge batches retain normal scoring and the same resolution-scoped combo.
+- If post-cleanup gravity/merges raise the highest level again, repeat cleanup at the next settled boundary using the latest minimum until no cleanup remains pending.
+
+## Controls and Input Methods
+Keep Legacy Input Manager touch/click handling and current boosters. Input remains blocked by `moveResolving` through cleanup and its gravity/merge consequences. No new controls or input backend changes.
+
+# UI
+No new UI assets, panels, or effects. Preserve current score flights, multiplier badge, and deferred milestone/loss panels.
+
+```
+Existing cascade completes
+          ↓
+Remove board towers with tier < current minimum
+          ↓
+Existing gravity slides and any resulting merges
+          ↓
+Repeat if highest tier increased again
+          ↓
+One move-resolved notification → loss/milestone checks → save
+```
+
+# Key Asset & Context
+- Modify `Assets/Scripts/Gameplay/GameController.cs`: `IncrementLevel(int)` currently tracks historical highest tier; `ApplyLevelUpPowerUp()` directly increments a tower but does NOT currently update historical level unless a subsequent merge event occurs. Fix that missing notification. `SaveLevelAfterMove()` waits for settlement before ending combo/unlocking input; insert cleanup processing before that finalization. `Update()` checks transitions only when `!moveResolving && grid.IsSettled()`; preserve this guard.
+- Modify `Assets/Scripts/Gameplay/GridController.cs`: logical occupancy is `grid[,]`; obstacles occupy a separate array. `ResolveGravity(int, bool)` handles falling obstacles and marks unsupported towers for dropping. `IsSettled()` includes merge ownership, moving towers and obstacles. `CaptureBoardState()` maintains `lastIntactBoardState` for scene teardown. Add targeted low-tier removal, not `ClearBoard()`.
+- Read-only `Assets/Scripts/Gameplay/TowerController.cs`: merge events occur after absorption, while the surviving tower still owns its coroutine. Do not delete board pieces directly from those events. `OnDisable()` stops routines and removes tracking; clear occupancy before disabling/destroying removed towers. No TowerController changes expected.
+- Create `Assets/Editor/Tests/EndlessLevelCleanupTests.cs`: follow existing editor-hosted harness conventions; use isolated fixtures and a distinct SessionState prefix. Do not overwrite `PlayModeTestRunner.cs` or existing animation/score tests.
+- Inspected loaded scene connections: `Game` references `Grid`, `Queue`, and `Tower` prefab. AssetDatabase dependency/dependent queries identify GameController/GridController dependents as EndlessMode and recovery scenes, and TowerController dependents as Tower prefab, EndlessMode, and recovery scene. No scene/prefab/level asset edits expected; never directly edit recovery scenes.
+- Recheck dependencies/dependents before implementation edits, with the dependency tool if available or read-only AssetDatabase queries otherwise. No package, rendering, save schema, backend, monetization, or UI changes.
+
+# Implementation Steps
+1. **Expose deterministic Endless spawn bounds**
+   - File: GameController.cs. Extract the existing raw min and exclusive max arithmetic into a deterministic helper used by `GetTowerSpawnLevelRange()`. Expose/derive the valid minimum as max(1, raw min), keeping the existing random distribution and reroll loop intact. Do not change upper-bound semantics or rounding.
+   - Dependencies: inspected current spawn generation and queue guard.
+2. **Track actual highest-level increases, including boosters**
+   - File: GameController.cs. On an actual Endless increase in `IncrementLevel`, mark cleanup pending; do not delete during merge callbacks. In `ApplyLevelUpPowerUp`, call `IncrementLevel(towerCtrl.level)` after the direct increment so booster-only upgrades track historical level/record/milestone correctly in both modes; only Endless sets cleanup pending.
+   - Clear pending state on load, reset/retry and campaign configuration to avoid stale work. Do not retroactively prune a loaded board merely because it contains old low towers; this request triggers on new level increases.
+   - Dependencies: Step 1.
+3. **Add safe targeted board pruning**
+   - File: GridController.cs. Add a method such as `RemoveTowersBelowLevel(int minimumLevel)` that scans logical board occupancy, collects affected columns, clears each matching cell before disabling/destroying its tower, and removes stale tracking. Preserve all towers at/above the minimum, obstacles, unavailable cells, board dimensions and queue.
+   - Only invoke when the board is settled. Include safe handling of null/uninitialized boards and temporary entry occupancy. Resolve gravity once per affected column after all deletions. Refresh the intact board snapshot after occupancy changes so teardown fallback cannot resurrect removed towers; final normal capture/save records settled coordinates.
+   - Do not fire `onBoardCleared`, which cancels unrelated score feedback. Use runtime Destroy/editor DestroyImmediate appropriately for fixtures.
+   - Dependencies: Steps 1–2; existing settlement and disable contracts.
+4. **Integrate repeated cleanup into action resolution**
+   - File: GameController.cs. In SaveLevelAfterMove, wait for the natural cascade to settle, then process pending Endless cleanup before EndComboTurn, unlocking input, onMoveResolved, loss/milestone checks and persistence.
+   - Consume the pending flag before pruning so further level increases during gravity can mark a new pass. Yield through gravity/merges and recheck settlement/pending work until complete. A pass with zero removals must finish without an unnecessary loop or stuck lock.
+   - Keep the existing combo active throughout actual resulting merges. Ensure single finalization and no duplicate save/notification. Preserve score-flight deferral and all campaign flow.
+   - Dependencies: Steps 2–3.
+5. **Verify isolated boundaries, cascades and regressions**
+   - File: new EndlessLevelCleanupTests.cs; production changes only to correct evidenced failures. Use temporary/in-memory fixtures without modifying player saves, real booster balances, or authored levels. Restore editor scene setup and clean test fixtures.
+   - Dependencies: Steps 1–4.
+
+# Verification & Testing
+- Compile with no new errors. Confirm extracted bounds match current raw spawn arithmetic at L=0–50 and valid minimum never drops below 1; retain queue reroll tests at L=11.
+- At 12→13, let the initial cascade finish, then remove every remaining level-1 board tower while preserving level-2+. At 16→17 remove levels 1–3; at 19→20 remove levels 1–4. Test a jump across multiple thresholds and ties-to-even rounding at odd L.
+- A level increase with unchanged minimum still safely processes the current floor. No increase in highest tier means no cleanup. Level 11 uses minimum 1, not raw 0.
+- Booster-only highest-tier increase without matching neighbors updates game.level/record and triggers cleanup. Booster on a tower below the historical maximum does not. Verify actual booster pathway in isolated fixtures without spending the user's inventory.
+- Verify pruning happens AFTER the original cascade, preserving its original merges/awards; all low towers are removed together, then gravity settles using current motion. Equal-minimum/high towers survive, and upper towers drop to correct logical/world coordinates.
+- Cleanup alone adds no points, combo count, merge pulse, damage, moves or booster consumption. Resulting real merges score normally and keep the action's combo; an additional highest-level increase causes a fresh cleanup pass.
+- No missing references, stale towersInPlay entries, merge ownership deadlocks, orphaned labels/proxies, or terminal checks before cleanup. onMoveResolved and final save occur once after final settlement. A previously full board can become playable before loss evaluation.
+- Save capture and teardown fallback omit removed towers; load retains the resulting board. Reset/retry/configure clears pending state. Test empty board/no matches/null grid and repeated calls.
+- Campaign starting towers, objectives, obstacle damage, queues and all boosters retain existing behavior except the corrected direct booster highest-tier notification. Old queued towers below the new Endless minimum remain queued as explicitly scoped.
+- Run existing animation/score/combo checks where available. Report unavailable Play Mode/device/iOS build validation honestly; no testing has been performed for this new feature during planning.
