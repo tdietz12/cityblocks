@@ -6,6 +6,11 @@ namespace UI
     {
         [SerializeField] private TMPro.TMP_Text _label;
         [SerializeField] private CanvasGroup _group;
+        [SerializeField, Min(0f)] private float _multiplierBurstDuration = 0.15f;
+        [SerializeField, Range(1f, 1.5f)] private float _multiplierBurstScale = 1.25f;
+        private bool _bursting;
+        private float _burstAge;
+        private float _burstFrom;
         private RectTransform _rect;
         private Vector2 _origin;
         private float _age;
@@ -14,7 +19,26 @@ namespace UI
         private float _riseDistance;
         private bool _running;
         public int Points { get; private set; }
+        public int Lease { get; private set; }
+        public Vector2 Position => _rect.anchoredPosition;
         public bool IsComplete { get; private set; }
+        private bool _multiplierApplied = true;
+
+        public void PrepareMultiplier(int basePoints)
+        {
+            _multiplierApplied = false;
+            _label.SetText("+{0}", basePoints);
+        }
+
+        public void ApplyMultiplier()
+        {
+            if (_multiplierApplied || !_running) return;
+            _multiplierApplied = true;
+            _label.SetText("+{0}", Points);
+            _burstAge = 0f;
+            _burstFrom = _rect.localScale.x;
+            _bursting = true;
+        }
 
         private void Awake() { Cache(); }
         private void Cache()
@@ -33,6 +57,10 @@ namespace UI
         public void Begin(int points, Vector2 origin, float riseDuration, float flightDuration, float riseDistance)
         {
             Cache();
+            Lease++;
+            _multiplierApplied = true;
+            _bursting = false;
+            _burstAge = 0f;
             Points = points;
             _origin = origin;
             _age = 0f;
@@ -52,9 +80,29 @@ namespace UI
 
         public bool Advance(float delta, Vector2 destination)
         {
+            bool complete = AdvanceMotion(delta, destination);
+            if (!complete && _running && _bursting)
+            {
+                _burstAge += Mathf.Max(0f, delta);
+                float t = _multiplierBurstDuration <= 0f ? 1f : Mathf.Clamp01(_burstAge / _multiplierBurstDuration);
+                _rect.localScale = Vector3.one * ScoreFeedbackController.EvaluateCounterPulse(t, _burstFrom, _multiplierBurstScale);
+                if (t >= 1f) _bursting = false;
+            }
+            return complete;
+        }
+
+        private bool AdvanceMotion(float delta, Vector2 destination)
+        {
             if (!_running) return false;
             _age += Mathf.Max(0f, delta);
             Vector2 risen = _origin + Vector2.up * _riseDistance;
+            if ((!_multiplierApplied || _bursting) && _age >= _riseDuration)
+            {
+                _age = _riseDuration;
+                _rect.anchoredPosition = risen;
+                _rect.localScale = Vector3.one;
+                return false;
+            }
             if (_age < _riseDuration)
             {
                 _rect.anchoredPosition = Vector2.LerpUnclamped(_origin, risen, _age / _riseDuration);
@@ -79,7 +127,9 @@ namespace UI
 
         public void Cancel()
         {
+            Lease++;
             _running = false;
+            _bursting = false;
             IsComplete = false;
             gameObject.SetActive(false);
         }

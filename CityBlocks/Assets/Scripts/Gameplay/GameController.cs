@@ -102,6 +102,29 @@ namespace Gameplay
         private bool endlessFinished;
         private bool prepLevelUpPanel = false;
         private bool moveResolving;
+        private int _turnMergeCount;
+        private bool _comboTurnActive;
+        private int _comboTurnId;
+        public int CurrentMergeMultiplier => _comboTurnActive ? Mathf.Max(1, _turnMergeCount) : 1;
+        public int ComboTurnId => _comboTurnId;
+        public event System.Action onComboTurnStarted;
+        public event System.Action onComboTurnEnded;
+
+        private void BeginComboTurn()
+        {
+            _turnMergeCount = 0;
+            _comboTurnActive = true;
+            _comboTurnId++;
+            onComboTurnStarted?.Invoke();
+        }
+
+        private void EndComboTurn()
+        {
+            _turnMergeCount = 0;
+            _comboTurnActive = false;
+            onComboTurnEnded?.Invoke();
+        }
+
         private LevelDefinition levelDefinition;
 
         private void Awake()
@@ -174,6 +197,8 @@ namespace Gameplay
         /// </summary>
         public void Load(GameSaveData gameSaveData, ProgressionData progressionData)
         {
+            EndComboTurn();
+            if (_scoreFeedback != null) _scoreFeedback.ClearAndSynchronize();
             recordScore = progressionData != null ? progressionData.recordScore : 0;
             recordLevel = progressionData != null ? progressionData.recordLevel : 0;
             if (gameSaveData != null)
@@ -465,6 +490,8 @@ namespace Gameplay
         {
             if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
 
+            BeginComboTurn();
+            moveResolving = true;
             RecordBoosterUse();
             GameObject removed = grid.grid[col, row];
             grid.grid[col, row] = null;
@@ -481,6 +508,8 @@ namespace Gameplay
         {
             if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
 
+            BeginComboTurn();
+            moveResolving = true;
             RecordBoosterUse();
             TowerController towerCtrl = grid.grid[col, row].GetComponent<TowerController>();
             towerCtrl.level++;
@@ -508,6 +537,7 @@ namespace Gameplay
         /// </summary>
         private void PlayTower(int column, GameObject incomingTower, bool isTopOfColumn)
         {
+            BeginComboTurn();
             TotalMoves++;
             moveResolving = true;
             hasActiveRun = true;
@@ -560,6 +590,7 @@ namespace Gameplay
         {
             yield return null;
             yield return new WaitUntil(grid.IsSettled);
+            EndComboTurn();
             moveResolving = false;
             onMoveResolved?.Invoke();
 
@@ -693,13 +724,18 @@ namespace Gameplay
         /// <summary>
         /// Increases score based on merged tower level and updates records and UI.
         /// </summary>
+        public event System.Action<int, int, int, Vector3, int> onMergeScoreAwarded;
+
         public void AwardMergeScore(int towerLevel, Vector3 worldPosition)
         {
             if (_scoreFeedback != null) _scoreFeedback.CaptureRecordBaseline();
-            int points = towerLevel * 10;
+            int multiplier = _comboTurnActive ? ++_turnMergeCount : 1;
+            int basePoints = (int)System.Math.Min(int.MaxValue, System.Math.Max(0L, (long)towerLevel * 10));
+            long desired = (long)basePoints * multiplier;
+            int points = (int)System.Math.Min(desired, System.Math.Max(0L, (long)int.MaxValue - score));
             score += points;
             if (score > recordScore) recordScore = score;
-            if (_scoreFeedback != null) _scoreFeedback.Enqueue(points, worldPosition);
+            onMergeScoreAwarded?.Invoke(basePoints, multiplier, points, worldPosition, _comboTurnId);
             UpdateScoreUI();
         }
 
@@ -736,6 +772,7 @@ namespace Gameplay
         /// </summary>
         public void ResetValuesOnLoss()
         {
+            EndComboTurn();
             hasActiveRun = false;
             score = 0;
             level = 0;

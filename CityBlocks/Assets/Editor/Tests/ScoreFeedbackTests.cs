@@ -360,20 +360,20 @@ namespace CityBlocks.EditorTests
             Call(_game, "AddTowerToQueue", 1); Call(_game, "AddTowerToQueue", 1); Call(_game, "AddTowerToQueue", 1);
             began = Time.unscaledTime; Call(_game, "GetCellHit", 1, 2);
             while (!(bool)Call(_grid, "IsSettled")) { Check(Time.unscaledTime - began < 4f, "Chain board did not settle"); yield return null; }
-            Check((int)Get(_game, "score") == 50, "Actual merge chain scoring changed");
-            Check(Pending && Displayed < 50 && !(bool)Prop(_game, "IsResolvingMove"), "Cosmetic collection blocked board settlement or revealed points early");
+            Check((int)Get(_game, "score") == 80, "Turn chain did not award 20 + 30x2");
+            Check(Pending && Displayed < 80 && !(bool)Prop(_game, "IsResolvingMove"), "Cosmetic collection blocked board settlement or revealed points early");
             var saveOut = Activator.CreateInstance(T("Data_Persistence.GameSaveData"));
             Set(_game, "hasActiveRun", true);
             var args = new object[] { saveOut, Activator.CreateInstance(T("Data_Persistence.ProgressionData")) };
             _game.GetType().GetMethod("Save").Invoke(_game, args);
-            Check((int)Get(args[0], "score") == 50, "Save omitted in-flight points");
+            Check((int)Get(args[0], "score") == 80, "Save omitted in-flight multiplied points");
             while (Pending) { Check(Time.unscaledTime - began < 4f, "Chain collection stalled"); yield return null; }
-            Check(Displayed == 50, "Chain popup totals did not reach 50");
+            Check(Displayed == 80, "Chain popup totals did not reach 80");
             Check(mergeStarts == 2, "Chain camera onset emitted extra or missing pulses");
-            Log("Real restored-tower chain +20/+30: model 50, instant camera impact at each merge start, visual collection independent of board settlement, full score saved mid-flight");
+            Log("Real restored-tower chain +20/+60: model 80, independent multiplied collection and full score saved mid-flight");
             Award(2); Set(_game, "state", Enum.ToObject(T("Gameplay.GameController+GameState"), 0));
             while (Pending) yield return null;
-            Check(Displayed == 70, "Pause stranded cosmetic points");
+            Check(Displayed == 100, "Pause stranded cosmetic points");
             Log("Unscaled pause collection and no user save/progress service fixture passed");
 
             Call(_grid, "ClearBoard"); Set(_grid, "grid", null);
@@ -394,7 +394,7 @@ namespace CityBlocks.EditorTests
             while (!(bool)Call(_grid, "IsSettled")) { Check(Time.unscaledTime - began < 4f, "Horizontal chain did not settle"); yield return null; }
             Check(horizontalStarts.Count == 2 && firstHorizontalCompletion >= 0f, "Horizontal test did not produce two merge batches");
             Check(horizontalStarts[1] - firstHorizontalCompletion >= requiredPause - 0.001f, "Stationary horizontal chain omitted artificial pause");
-            Check((int)Get(_game, "score") == 50, "Horizontal delay changed merge scoring");
+            Check((int)Get(_game, "score") == 80, "Horizontal chain did not apply x2 to its second merge");
             Log("Horizontal-only stationary chain paused " + (horizontalStarts[1] - firstHorizontalCompletion) + "s before next merge (configured " + requiredPause + "s)");
             while (Pending) { Check(Time.unscaledTime - began < 4f, "Horizontal score collection stalled"); yield return null; }
             yield return null;

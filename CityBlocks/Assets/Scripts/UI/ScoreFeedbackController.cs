@@ -12,8 +12,14 @@ namespace UI
         [SerializeField] private RectTransform _pulseTarget;
         [SerializeField] private MergeScorePopup _popupPrefab;
         [SerializeField] private Camera _gameplayCamera;
+        [SerializeField] private MergeMultiplierCounter _multiplierCounter;
+        [SerializeField] private MergeMultiplierToken _multiplierTokenPrefab;
+        [SerializeField, Min(0f)] private float _multiplierFlightDuration = 0.35f;
+        private readonly List<MergeMultiplierToken> _tokens = new List<MergeMultiplierToken>();
+        private readonly Stack<MergeMultiplierToken> _tokenPool = new Stack<MergeMultiplierToken>();
         [Header("Timing")]
         [SerializeField, Min(0f)] private float _riseDuration = 0.3f;
+        [SerializeField, Min(0f)] private float _multipliedRiseDuration = 0.8f;
         [SerializeField, Min(0f)] private float _flightDuration = 0.15f;
         [SerializeField, Min(0f)] private float _riseDistance = 45f;
         [SerializeField, Min(0f)] private float _worldHeightOffset = 0.7f;
@@ -33,7 +39,15 @@ namespace UI
         public event System.Action onDisplayedScoreChanged;
         public int DisplayedScore => _game == null ? 0 : Mathf.Max(0, _game.score - _pendingPoints);
         public int DisplayedRecordScore => Mathf.Max(_recordBaseline, HasPendingFeedback || _game == null ? DisplayedScore : _game.recordScore);
-        public bool HasPendingFeedback => _active.Count > 0 || _pulsing;
+        public bool HasPendingFeedback => _active.Count > 0 || _tokens.Count > 0 || _pulsing ||
+            (_multiplierCounter != null && _multiplierCounter.HasPendingPulse);
+        internal float CounterPulseDuration => _pulseDuration;
+        internal float CounterPulseScale => _pulseScale;
+        internal static float EvaluateCounterPulse(float t, float from, float peak)
+        {
+            return t < 0.35f ? Mathf.Lerp(from, peak, Smooth(t / 0.35f))
+                : Mathf.Lerp(peak, 1f, Smooth((t - 0.35f) / 0.65f));
+        }
 
         public void CaptureRecordBaseline()
         {
@@ -45,17 +59,41 @@ namespace UI
             if (_game == game && (gameplayCamera == null || _gameplayCamera == gameplayCamera)) return;
             ClearAndSynchronize();
             if (_grid != null) _grid.onBoardCleared -= ClearAndSynchronize;
+            UnsubscribeGame();
             _game = game;
+            if (_game != null)
+            {
+                _game.onMergeScoreAwarded += EnqueueAward;
+                _game.onComboTurnStarted += BeginTurn;
+                _game.onComboTurnEnded += EndTurn;
+            }
             if (gameplayCamera != null) _gameplayCamera = gameplayCamera;
             _grid = game != null ? game.grid : null;
             if (_grid != null) _grid.onBoardCleared += ClearAndSynchronize;
             _recordBaseline = game != null ? game.recordScore : 0;
             _canvas = _popupLayer != null ? _popupLayer.GetComponentInParent<Canvas>() : null;
             if (_pulseTarget != null) _baseScale = _pulseTarget.localScale;
+            if (_multiplierCounter != null) _multiplierCounter.Bind(_game, _gameplayCamera, _popupLayer, _pulseDuration, _pulseScale);
             onDisplayedScoreChanged?.Invoke();
         }
 
+        private void UnsubscribeGame()
+        {
+            if (_game == null) return;
+            _game.onMergeScoreAwarded -= EnqueueAward;
+            _game.onComboTurnStarted -= BeginTurn;
+            _game.onComboTurnEnded -= EndTurn;
+        }
+
+        private void BeginTurn() { if (_multiplierCounter != null) _multiplierCounter.EndTurn(); }
+        private void EndTurn() { if (_multiplierCounter != null) _multiplierCounter.EndTurn(); }
+
         public void Enqueue(int points, Vector3 mergeWorldPosition)
+        {
+            EnqueueAward(points, 1, points, mergeWorldPosition, _game != null ? _game.ComboTurnId : 0);
+        }
+
+        private void EnqueueAward(int basePoints, int multiplier, int points, Vector3 mergeWorldPosition, int turnId)
         {
             if (_game == null || !isActiveAndEnabled || _popupLayer == null || _scoreTarget == null ||
                 !_scoreTarget.gameObject.activeInHierarchy || _popupPrefab == null || _gameplayCamera == null)
@@ -79,13 +117,28 @@ namespace UI
             if (popup == null) popup = Instantiate(_popupPrefab, _popupLayer);
             _pendingPoints += points;
             _active.Add(popup);
-            popup.Begin(points, origin, _riseDuration, _flightDuration, _riseDistance);
+            popup.Begin(points, origin, multiplier >= 2 ? _multipliedRiseDuration : _riseDuration, _flightDuration, _riseDistance);
+            if (multiplier >= 2)
+            {
+                if (_multiplierCounter != null) _multiplierCounter.ShowMultiplier(multiplier);
+                popup.PrepareMultiplier(basePoints);
+                if (_multiplierCounter != null && _multiplierTokenPrefab != null)
+                {
+                    MergeMultiplierToken token = null;
+                    while (_tokenPool.Count > 0 && token == null) token = _tokenPool.Pop();
+                    if (token == null) token = Instantiate(_multiplierTokenPrefab, _popupLayer);
+                    token.Begin(multiplier, _multiplierCounter.Position, popup, _multiplierFlightDuration);
+                    _tokens.Add(token);
+                }
+                else popup.ApplyMultiplier();
+            }
         }
 
-        private void Update() { Advance(Time.unscaledDeltaTime); }
+        private void Update(){ Advance(Time.unscaledDeltaTime); }
 
         public void Advance(float delta)
         {
+            if (_multiplierCounter != null) _multiplierCounter.Advance(delta);
             if (_active.Count > 0)
             {
                 if (_scoreTarget == null || !_scoreTarget.gameObject.activeInHierarchy || _popupLayer == null)
@@ -113,11 +166,22 @@ namespace UI
                     onDisplayedScoreChanged?.Invoke();
                 }
             }
+            for (int i = _tokens.Count - 1; i >= 0; i--)
+            {
+                var token = _tokens[i];
+                bool complete = token == null || token.Advance(delta);
+                if (token != null && token.HasArrived && token.HasValidTarget) token.Target.ApplyMultiplier();
+                if (!complete) continue;
+                if (token != null)
+                {
+                    token.Cancel(); _tokenPool.Push(token);
+                }
+                _tokens.RemoveAt(i);
+            }
             if (!_pulsing || _pulseTarget == null) return;
             _pulseAge += Mathf.Max(0f, delta);
             float t = _pulseDuration <= 0f ? 1f : Mathf.Clamp01(_pulseAge / _pulseDuration);
-            float scale = t < 0.35f ? Mathf.Lerp(_pulseFrom, _pulseScale, Smooth(t / 0.35f))
-                : Mathf.Lerp(_pulseScale, 1f, Smooth((t - 0.35f) / 0.65f));
+            float scale = EvaluateCounterPulse(t, _pulseFrom, _pulseScale);
             _pulseTarget.localScale = _baseScale * scale;
             if (t >= 1f) { _pulsing = false; _pulseTarget.localScale = _baseScale; }
         }
@@ -135,6 +199,10 @@ namespace UI
             foreach (MergeScorePopup popup in _active)
                 if (popup != null) { popup.Cancel(); _pool.Push(popup); }
             _active.Clear();
+            foreach (var token in _tokens)
+                if (token != null) { token.Cancel(); _tokenPool.Push(token); }
+            _tokens.Clear();
+            if (_multiplierCounter != null) _multiplierCounter.ResetCounter();
             _pendingPoints = 0;
             _pulsing = false;
             if (_pulseTarget != null) _pulseTarget.localScale = _baseScale;
@@ -144,6 +212,10 @@ namespace UI
 
         private void OnDisable() { ClearAndSynchronize(); }
         private void OnApplicationPause(bool paused) { if (paused) ClearAndSynchronize(); }
-        private void OnDestroy() { if (_grid != null) _grid.onBoardCleared -= ClearAndSynchronize; }
+        private void OnDestroy()
+        {
+            UnsubscribeGame();
+            if (_grid != null) _grid.onBoardCleared -= ClearAndSynchronize;
+        }
     }
 }

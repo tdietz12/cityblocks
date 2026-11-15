@@ -481,3 +481,135 @@ Keep Legacy Input Manager touch/click controls and all existing buttons. Popups 
 - **Lifecycle:** pause/resume, disabled/missing presenter or target, zero durations, reset/ClearBoard, retry/next level, menu exit, scene teardown, and rebind all clean up flights, pooled objects, subscriptions, and deferred panels. Missing presentation falls back to immediate display instead of waiting forever.
 - **Input/performance:** no popup raycast interception, no added font/atlas bloat, no per-frame scene lookup/material creation, bounded reusable pool growth, and no unnecessary full-HUD Canvas rebuilds. Preserve existing mobile UI and tutorial interaction.
 - **Validation:** compilation with no new errors; deterministic and multi-frame checks with explicit reported results; inspect runtime screenshots for readable popups, target alignment, and no HUD/modal occlusion. Device/iOS-build verification only when available; report unavailable or interrupted checks rather than claiming success.
+
+---
+
+# Turn Merge Multiplier & Flying Multiplier Tokens — Current Requested Scope
+
+Implement only this extension for the current request; do not repeat the older tutorial/score-popup work. Read actual files before implementation. Preserve the latest saved camera/score tuning, not the outdated values in prior sections: instant 6% merge zoom with 0.20s return; stabilized X/Z drift at translation 0.03, rotation 0.4 degrees, frequency 0.35; 0.15s stationary horizontal-chain pause; score popup rise 0.30s over 45 UI units, flight 0.15s, text 44pt with shared shadow material; counter pulse 1.20x over 0.15s. Preserve SingleEventSystemGuard.
+
+# Project Overview
+- Game Title: City Blocks.
+- High-Level Concept: A single-player city-themed tower-merging puzzle. Reward successive merge batches within one turn with escalating score multipliers, made readable by a pulsing board-corner badge and a miniature multiplier flying into each affected score popup before score collection.
+- Players: Single player.
+- Inspiration / Reference Games: Existing 2048 / Triple Town references; escalating chain/combo feedback rather than new board rules.
+- Tone / Art Direction: Existing colorful low-poly city and gold, shadowed score feedback. Compact, legible multiplier box; no broad HUD redesign.
+- Target Platform: iOS.
+- Screen Orientation / Resolution: Portrait; retain actual CanvasScaler reference/layout and validate small/tall iPhone aspects. No hard-coded screen-resolution positioning.
+- Render Pipeline: URP-HighFidelity, Unity 6000.4.5f1. No pipeline, lighting, shader-source, or Volume changes.
+
+# Game Mechanics
+## Core Gameplay Loop
+Make a legal placement, resolve all resulting merge batches and gravity, collect points, then begin the next turn. A turn-local combo rewards extended chains without carrying a multiplier to another placement.
+
+### Confirmed User Decisions
+1. **One completed merge batch counts as one merge.** Simultaneously absorbing multiple neighbors increments the multiplier once, consistent with current merge/score/camera feedback. Each subsequent chain batch increments it again.
+2. **Only that merge receives its multiplier.** Earlier awards are not recalculated or multiplied retroactively.
+3. Preserve the previously selected internal-immediate/visible-delayed score architecture: calculate and credit the multiplied award internally at merge completion; visually apply it to the popup when the miniature multiplier arrives, then collect it into the top score HUD.
+
+### Scoring and Turn Contract
+- Valid turn begins before the accepted tower starts resolving; merge count starts at zero.
+- First completed batch: multiplier 1, no visible x1 box, ordinary base-score popup.
+- Second batch: show **x2** in the badge, pulse it, and launch a smaller x2 toward that batch's score popup.
+- Third and later batches: x3, x4, etc.; pulse and launch a matching token on each increment. No cap unless the existing numeric storage requires safe handling.
+- Award formula: `basePoints = resultingTowerLevel * 10`; `finalPoints = basePoints * mergeIndexWithinTurn` (first batch uses 1).
+- Example: resulting levels 2, 3, 4 across three batches yield +20, +60, +120, totaling **200**; not a retroactive multiplier on all turn points.
+- Reset logical combo state when the entire board resolution finishes (`grid.IsSettled` / `onMoveResolved`), not after a short time gap. Existing horizontal-chain waits and falling obstacles must not reset it prematurely.
+- A board-changing booster that triggers resolution gets its own resolution-scoped combo (same semantics as a turn); its initial non-merge tier increase does not increment the combo. Look-ahead, extra turns, rejected input, and obstacle damage do not create or increment a merge combo.
+- After turn end, finish any already-started badge pulse, then hide/reset the badge without extending gameplay settling. Already-launched multiplier tokens and score popups retain immutable turn/award snapshots and finish independently. A new turn resets the badge immediately; old tokens cannot change the new turn's counter.
+- Fresh run, loaded run, retry, and scene exit start/reset with no combo badge or replayed tokens. Save the fully credited logical score including already-earned multipliers using existing save paths; no cosmetic token/combination-state save schema. Do not redesign the project's existing handling of interrupted, unfinished board cascades.
+- Score objectives use the multiplied logical total and may therefore be achieved sooner. Do not alter level targets or rebalance authored levels without a separate request.
+
+## Controls and Input Methods
+Keep Legacy Input Manager controls, legal-placement validation, existing move limits, and power-up targeting. The new badge/tokens are non-interactive; disable graphic raycasts and CanvasGroup input on them. Keep exactly one working EventSystem through the existing guard; no additional EventSystem, GraphicRaycaster, or input package.
+
+# UI
+## Initial Layout / Motion Storyboard
+```
++----------------------------------------+
+| SCORE total           existing HUD      |
+|                                        |
+|             grid upper-right [ x2 ]     |
+|                              pulse      |
+|                              |          |
+|                  smaller x2  |          |
+|                      \       |          |
+|                 +30  <- x2 arrives      |
+|                  -> +60                 |
+|                    ^ short rise         |
+|                    \ -> top SCORE       |
+|                         score pulse      |
+|           existing power-up buttons     |
++----------------------------------------+
+```
+- Add a compact badge initially about **64x40 UI reference units**, 28pt gold text, dark rounded background reusing existing UI art. Position it over the **player-visible upper-right corner area of the grid**, with a small configurable inset. This is initial tuning, not a fixed-resolution absolute coordinate.
+- Project the actual board's corner bounds using GameController.GameplayCamera and current GridController dimensions/WorldOffset. Determine top/right in screen space, not from logical row names: this camera projects the logical top-entry row below the board. Reposition after board fit/layout changes and follow subtle camera drift without per-frame scene searches.
+- Use the existing screen-space feedback Canvas/layer. Keep the badge outside PlayPanel and layout groups that would override its projected positioning. Clamp within the Canvas/safe display area without overlapping the top score or power-up HUD.
+- Badge increments use the **same pulse equation, amplitude, and duration as the score counter** (current 1.20x, 0.15s); restart from current scale without additive growth. Share the existing pulse calculation/tuning rather than introducing a tween package.
+- Miniature tokens: about **24pt**, same font/gold shadowed style, visibly smaller than the 44pt score popup. Text is x2/x3/etc., not a separate point award.
+- Token starts at the badge center, flies to its own moving/rising score popup (initial duration about 0.15s), disappears on contact, and changes popup text from the base amount to the final multiplied amount. A subtle popup pop on application may be used only if it does not change collection timing/readability.
+- Token motion overlaps the 0.30s rise. A multiplied popup must not begin its final flight to the score HUD before its token has applied; if timing/layout makes that necessary, hold only that popup at its rise endpoint. Never block the board or launch the token toward the main HUD instead.
+- The score HUD still increases only when the final score popup arrives, with its existing fast pulse. Pending visual accounting always reserves **final** multiplied points, even while the popup temporarily displays the base amount.
+
+# Key Asset & Context
+## Existing Assets to Modify
+- `Assets/Scripts/Gameplay/GameController.cs`: add resolution-local merge count/turn identity and combo lifecycle notifications. Begin only after validating/accepting placement or board-changing booster use. `AwardMergeScore(int, Vector3)` increments the batch count when a combo turn is active, computes final points once, immediately updates score/record, and passes base/multiplier/final information to presentation. End/reset in SaveLevelAfterMove after board settling and before the next turn can begin; reset on existing load/run-reset paths.
+- `Assets/Scripts/UI/ScoreFeedbackController.cs`: extend Enqueue and pooling/accounting for score awards carrying base, final points, multiplier, and turn/award identity. Track multiplier tokens as pending feedback; coordinate token arrivals, popup gates, badge updates, and reset. Keep all normal score writers/records/objective presentation on the existing delayed-display values.
+- `Assets/Scripts/UI/MergeScorePopup.cs`: separate immutable collected Points from initially displayed base points. Add an exactly-once multiplier-application operation and a flight gate, reset all state on pool reuse/cancel. Preserve normal x1 popup timing and shadow/font styling.
+- `Assets/Scripts/UI/LevelRulesUI.cs`: bind the new badge through the existing GameController/presenter initialization if required; keep existing deferred terminal overlays waiting for all relevant feedback and the final score pulse.
+- `Assets/Scenes/EndlessMode.unity`: wire the badge, miniature token template, explicit gameplay camera, and presenter references into the current standalone HUD; preserve camera, input, lighting, and unrelated UI.
+- `Assets/Prefabs/UI/LevelRulesUI.prefab`: equivalent reusable badge/presenter hierarchy and bindings; no scene-object references serialized into prefab assets.
+- `Assets/Editor/Tests/ScoreFeedbackTests.cs` and/or proposed combo tests: update accepted-turn chain totals (the old +20/+30 = 50 chain becomes +20/+60 = 80). Keep ordinary direct-award/no-active-turn checks at x1. Do not overwrite existing objective-card test scripts.
+
+## Assets to Create
+- `Assets/Scripts/UI/MergeMultiplierCounter.cs`: projected badge positioning, show/increment/reset, and score-equivalent pulse presentation, with cached Game/Grid/camera/RectTransform references.
+- `Assets/Scripts/UI/MergeMultiplierToken.cs`: pooled small multiplier flight element, tied to a unique score-popup/award handle, with completion/cancel semantics and moving target tracking.
+- `Assets/Prefabs/UI/MergeMultiplierCounter.prefab` and `Assets/Prefabs/UI/MergeMultiplierToken.prefab`: existing font/shadow material and rounded-rect art, fixed readable sizes; no font atlas duplication or input interception.
+- `Assets/Editor/Tests/MergeMultiplierTests.cs` if a separate harness is cleaner: deterministic lifecycle/accounting/UI geometry tests and optional isolated runtime visual verification with a distinct state prefix.
+
+## Inspected Context / Impact
+- GameController awards score centrally after both standard and forced top merges; saved towers now use that same position-aware path. One new combo increment belongs there, not in per-neighbor removal or the camera's start event.
+- SaveLevelAfterMove waits for grid.IsSettled before unlocking input and firing onMoveResolved. Existing chain delays/obstacle motion are part of this contract; visual flights are not.
+- Existing ScoreFeedbackController pending ledger subtracts pending final points from game.score; extend this accounting rather than creating an unrelated score accumulator.
+- Existing popup is a pooled screen-space TMP element with independent timed rise/flight. Never let a token mutate a pooled popup belonging to another award after reset/reuse.
+- Read-only AssetDatabase dependency queries identified scene/prefab dependents for GameController, GridController, LevelRulesUI, ScoreFeedbackController, and MergeScorePopup, including recovery scenes. Do not edit recovery scenes directly.
+- Recheck dependencies before each implementation edit, including new prefab references. No package, backend, font-source, EventSystem, rendering-pipeline, or authored-level changes.
+
+# Implementation Steps
+1. **Implement turn-local multiplier accounting**
+   - Modify GameController's accepted-action, AwardMergeScore, settling, and reset/load paths.
+   - Keep combo counting independent of cosmetic flight duration; first batch x1, next batch x2, etc. Turn identity must be stable through gravity and horizontal pauses.
+   - Make ordinary compatibility/direct awards outside an accepted resolution remain x1, avoiding stale multipliers during initialization or restoration.
+   - Compute base/final points once with safe numeric intermediates; prevent overflow/wraparound in new multiplier math while retaining current storage types. Do not retroactively modify earlier awards.
+   - Dependencies: inspected existing scoring/turn flow and user decisions.
+2. **Build badge and token presentation**
+   - Create the counter/token scripts and prefabs; add the small projected grid-corner badge to the existing feedback layer.
+   - Reuse score pulse math/current tuning for the badge and reuse existing static font/shadow material. Pool tokens; no per-frame font/material creation or scene-object lookup.
+   - Project current grid bounds into screen-space Canvas coordinates, using explicit cached camera references and configurable inset; preserve player input through the badge/tokens.
+   - Dependencies: Step 1 and existing HUD assets.
+3. **Apply multiplier visually before score collection**
+   - Modify MergeScorePopup and ScoreFeedbackController to spawn a base-text popup while reserving final points, then launch the appropriate token for multipliers >=2.
+   - Track independent award/turn handles and update the token's target as the popup rises. On exactly-once contact, show final points, hide/recycle the token, and allow score flight after the rise phase.
+   - Preserve unscaled visual timing and existing score collection/pulse behavior. Missing/disabled token presentation must apply the multiplier visually immediately rather than strand points or change model scoring.
+   - Dependencies: Steps 1–2.
+4. **Complete lifecycle and prefab/scene wiring**
+   - Bind the badge and templates in standalone scene and reusable UI prefab, including initial upper-right grid positioning.
+   - Reset logical counter at board completion and hide/reset the badge after any short pulse finishes; do not cancel valid old score/token flights. New turn/rebind/retry/load/unload clears or isolates old handles appropriately.
+   - Extend HasPendingFeedback for multiplier flights/pulses where needed so terminal panels do not occlude collection. Missing targets, app suspension, disabled presenter, and cancellation all synchronize displayed totals without a second model award.
+   - Dependencies: Steps 1–3; impact recheck before asset edits.
+5. **Verify gameplay rewards, presentation, and regression safety**
+   - Add deterministic tests first, then isolated multi-frame tests if the editor supports reliable entry. Use temporary/in-memory fixtures, independent state keys, completion detection, and safe scene restoration.
+   - Update old accepted-turn score expectations intentionally for the new scoring rule; do not weaken assertions to hide failures. Keep unrelated camera/single-EventSystem checks.
+   - Inspect multiplier positioning/pulses and token-to-popup application visually, including portrait sizes and overlapping turns. Report unavailable/interrupted runtime/device checks explicitly rather than repeating unsafe Play Mode entry attempts.
+   - Dependencies: Steps 1–4.
+
+# Verification & Testing
+- **Counting:** no badge/x1 on first batch; one x2 increment for the second batch; x3/x4 thereafter. Simultaneous two/three-neighbor absorptions count once. Include full-column top merges and cascades across different survivors/columns.
+- **Scoring:** three batches with base points 20/30/40 produce 20/60/120 (total 200). Two-batch chain produces 20+60=80. HUD collection amounts, internal score, record, saved total, and score-objective evaluation agree; earlier awards never change retroactively.
+- **Token ordering:** x2 badge pulses; small x2 travels from badge to its own +30 popup, popup becomes +60 before flying to main score. No mini token for x1. Gate collection until multiplier application, including zero/long durations and large frame steps.
+- **Concurrent feedback:** multiple popups/tokens, out-of-order arrivals, new turns while old flights finish, hidden badge after resolution, and pooled element reuse retain correct identities/amounts. No duplicate multiplication, wrong-popup application, missing points, or old-token changes to a new badge.
+- **Turn reset:** horizontal waits and gravity gaps do not reset combo. Settled board ends it. Next placement starts at x1. Invalid clicks and non-merging utility boosters do not increase it. Board-changing boosters start their own combo; initial booster tier change alone does not count.
+- **Lifecycle/save:** pause during an active resolution does not accidentally restart the combo; already-earned multiplied totals persist via normal score saves. New/loaded/retried runs show no stale counter or token replay. Preserve existing unfinished-cascade interruption behavior rather than claiming a redesigned resume system.
+- **Layout/readability:** badge remains over the visible upper-right grid area for 3–7 row/column boards, holes/obstacles, camera fit/drift/punch, and small/tall portrait layouts. Token is clearly smaller than score popup; neither intercepts touches, overlaps important HUD elements, or clips on reset/pulse.
+- **Performance:** bounded pooled token reuse, shared font/materials, fixed popup font sizes, cached references, no new EventSystem or per-frame scene searches, and no needless whole-HUD rebuilds.
+- **Validation:** zero new compile errors; explicit deterministic/runtime results and visual analysis where available; no changes to user saves/progress or real monetization services as fixtures. State the limits of any blocked Play Mode or device verification.
