@@ -149,6 +149,8 @@ GameObject:
   - component: {fileID: 4549042005289387648}
   - component: {fileID: 4772085983932047640}
   - component: {fileID: 3585752984278758453}
+  - component: {fileID: 7502961384554845882}
+  - component: {fileID: 6392423675759487766}
   m_Layer: 5
   m_Name: StoreOfferPanel
   m_TagString: Untagged
@@ -214,6 +216,43 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!225 &7502961384554845882
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641007269935553225}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &6392423675759487766
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1641007269935553225}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed47888e8cd2f4649ad823da8a6b1329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIPanelAnimator
+  _canvasGroup: {fileID: 7502961384554845882}
+  _cardTransform: {fileID: 3312107156865439246}
+  _staggeredButtons:
+  - {fileID: 3723058057833089182}
+  - {fileID: 912229734344209845}
+  _startScale: 0.82
+  _overshootScale: 1.04
+  _entranceDuration: 0.22
+  _fadeDuration: 0.16
+  _buttonStaggerDelay: 0.04
+  _shakeOnEnable: 0
+  _shakeAmplitude: 8
+  _gentleBannerPulse: 0
 --- !u!1 &2061277801442630648
 GameObject:
   m_ObjectHideFlags: 0
@@ -443,6 +482,7 @@ GameObject:
   - component: {fileID: 2221919139447127284}
   - component: {fileID: 7684723112418909842}
   - component: {fileID: 8227566540407761359}
+  - component: {fileID: 912229734344209845}
   m_Layer: 5
   m_Name: ReminderButton
   m_TagString: Untagged
@@ -552,6 +592,27 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &912229734344209845
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4034153675994286147}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 0
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 0}
+  _arrowNudgeDistance: 5
 --- !u!1 &5917776655256225431
 GameObject:
   m_ObjectHideFlags: 0
@@ -564,6 +625,7 @@ GameObject:
   - component: {fileID: 1526485786293726298}
   - component: {fileID: 4673274473110310340}
   - component: {fileID: 4779208464079569990}
+  - component: {fileID: 5854918039926940321}
   m_Layer: 5
   m_Name: DailyRewardOpenButton
   m_TagString: Untagged
@@ -673,6 +735,27 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &5854918039926940321
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5917776655256225431}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 0
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 0}
+  _arrowNudgeDistance: 5
 --- !u!1 &6560264540759129725
 GameObject:
   m_ObjectHideFlags: 0
@@ -1099,6 +1182,7 @@ GameObject:
   - component: {fileID: 3301909519289356017}
   - component: {fileID: 8095118775848863092}
   - component: {fileID: 5616480553777133820}
+  - component: {fileID: 3723058057833089182}
   m_Layer: 5
   m_Name: ClaimButton
   m_TagString: Untagged
@@ -1208,6 +1292,27 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &3723058057833089182
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8140686431657234855}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 1
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 0}
+  _arrowNudgeDistance: 5
 --- !u!1 &8285434084120758076
 GameObject:
   m_ObjectHideFlags: 0

@@ -7,7 +7,7 @@ namespace UI
     {
         [SerializeField] private TMPro.TMP_Text _label;
         [SerializeField] private CanvasGroup _group;
-        [SerializeField] private Vector2 _inset = new Vector2(8f, 8f);
+        [SerializeField] private Vector2 _inset = new Vector2(36f, 36f);
         [SerializeField, Min(0f)] private float _holdDuration = 2f;
         [SerializeField, Min(0f)] private float _shrinkDuration = 0.18f;
         private float _shrinkAge;
@@ -109,8 +109,8 @@ namespace UI
             {
                 if (visible > 0 && queue.towerQueue[i] == null) continue;
                 Vector3 center = visible == 0 ? new Vector3(2f, 0f, -1.5f) : queue.towerQueue[i].transform.position;
-                float radius = i == 0 ? 0.5f : 0.25f;
-                Vector3 point = center + Vector3.up * 0.6f + _camera.transform.right * radius;
+                float radius = i == 0 ? 0.65f : 0.35f;
+                Vector3 point = center + Vector3.up * 0.85f + _camera.transform.right * radius;
                 Vector3 screen = _camera.WorldToScreenPoint(point);
                 if (screen.z <= 0f) continue;
                 Vector2 local;

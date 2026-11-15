@@ -11,7 +11,7 @@ namespace Gameplay
         [SerializeField] private Camera _overlayCamera;
         [SerializeField] private GameController _game;
         [Header("Merge punch")]
-        [SerializeField, Range(0f, 0.1f)] private float _magnification = 0.06f;
+        [SerializeField, Range(0f, 0.1f)] private float _magnification = 0.03f;
         [SerializeField, Min(0f)] private float _punchInDuration = 0f;
         [SerializeField, Min(0f)] private float _returnDuration = 0.2f;
         [Header("Stabilized handheld")]

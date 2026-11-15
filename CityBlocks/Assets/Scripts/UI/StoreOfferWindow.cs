@@ -55,7 +55,7 @@ namespace UI
                 return;
             }
             if (noAdsTitle != null) noAdsTitle.text = noAdsOffer.displayName;
-            if (noAdsWindow != null) noAdsWindow.SetActive(true);
+            UIPanelAnimator.SetAnimatedActive(noAdsWindow, true);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(true);
         }
 
@@ -78,7 +78,7 @@ namespace UI
                 dailySpecialPurchaseButton.interactable = dailySpecial != null && !string.IsNullOrWhiteSpace(dailySpecial.productId);
             if (noAdsPurchaseButton != null)
                 noAdsPurchaseButton.interactable = noAdsOffer != null && !string.IsNullOrWhiteSpace(noAdsOffer.productId) && !PowerUpStore.AdsRemoved;
-            if (dailySpecialWindow != null) dailySpecialWindow.SetActive(true);
+            UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, true);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(true);
         }
 
@@ -86,21 +86,23 @@ namespace UI
         {
             GameObject panel = dailySpecialWindow != null ? dailySpecialWindow : noAdsWindow;
             if (panel == null) return;
-            if (panel.activeSelf) CloseDailySpecial();
+            UIPanelAnimator anim = panel.GetComponent<UIPanelAnimator>();
+            bool isOpen = panel.activeSelf && (anim == null || !anim.IsClosing);
+            if (isOpen) CloseDailySpecial();
             else OpenDailySpecial();
         }
 
         public void CloseDailySpecial()
         {
-            if (dailySpecialWindow != null) dailySpecialWindow.SetActive(false);
-            if (noAdsWindow != null && noAdsWindow != dailySpecialWindow) noAdsWindow.SetActive(false);
+            UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, false);
+            if (noAdsWindow != null && noAdsWindow != dailySpecialWindow) UIPanelAnimator.SetAnimatedActive(noAdsWindow, false);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(false);
         }
 
         public void CloseNoAdsOffer()
         {
-            if (noAdsWindow != null) noAdsWindow.SetActive(false);
-            if (dailySpecialWindow != null && dailySpecialWindow != noAdsWindow) dailySpecialWindow.SetActive(false);
+            UIPanelAnimator.SetAnimatedActive(noAdsWindow, false);
+            if (dailySpecialWindow != null && dailySpecialWindow != noAdsWindow) UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, false);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(false);
         }
 

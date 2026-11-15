@@ -28,13 +28,16 @@ namespace UI
 
         private void Toggle()
         {
-            panel.SetActive(!panel.activeSelf);
-            if (panel.activeSelf) Refresh();
+            if (panel == null) return;
+            UIPanelAnimator anim = panel.GetComponent<UIPanelAnimator>();
+            bool isOpen = panel.activeSelf && (anim == null || !anim.IsClosing);
+            UIPanelAnimator.SetAnimatedActive(panel, !isOpen);
+            if (!isOpen) Refresh();
         }
 
         private void Close()
         {
-            if (panel != null) panel.SetActive(false);
+            UIPanelAnimator.SetAnimatedActive(panel, false);
         }
 
         private void Claim()
@@ -62,7 +65,7 @@ namespace UI
                 StartCoroutine(DailyLoginNotification.RequestPermissionAndEnable());
                 if (feedbackLabel != null) feedbackLabel.text = "DAILY REMINDER REQUESTED";
             }
-            if (panel != null) panel.SetActive(false);
+            UIPanelAnimator.SetAnimatedActive(panel, false);
             Refresh();
         }
 

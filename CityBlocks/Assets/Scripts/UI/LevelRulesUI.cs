@@ -78,6 +78,18 @@ namespace UI
         private int tutorialStep;
         private bool isBound;
         private bool listenersRegistered;
+        private int _lastMovesRemaining = -1;
+        private string _lastDeleteText;
+        private string _lastLevelUpText;
+        private string _lastLookAheadText;
+        private float _movesPulseAge = -1f;
+        private float _deletePulseAge = -1f;
+        private float _levelUpPulseAge = -1f;
+        private float _lookAheadPulseAge = -1f;
+        private Color _movesDefaultColor = new Color(0.961f, 0.961f, 0.961f, 1f);
+        private bool _hasMovesDefaultColor;
+        private const float CounterTickDuration = 0.15f;
+        private const float CounterTickScale = 1.35f;
 
         public bool IsBound => isBound;
         public bool IsLevelMode => session != null || LevelFlow.IsLevelMode;
@@ -127,6 +139,7 @@ namespace UI
 
         private void Update()
         {
+            AdvanceCounterPulses(Time.unscaledDeltaTime);
             // Continuously update button interactability and remaining booster count labels
             RefreshPowerUps();
             if (_deferredResult != 0 && game != null && !game.HasPendingScoreFeedback)
@@ -136,6 +149,30 @@ namespace UI
                 if (result == 1 && game.state == GameController.GameState.win) ShowWin();
                 else if (result == 2 && game.state == GameController.GameState.lose) ShowLoss();
             }
+        }
+
+        public void AdvanceCounterPulses(float delta)
+        {
+            delta = Mathf.Max(0f, delta);
+            StepLabelPulse(movesLabel, ref _movesPulseAge, delta);
+            StepLabelPulse(deletePowerUpLabel, ref _deletePulseAge, delta);
+            StepLabelPulse(levelUpPowerUpLabel, ref _levelUpPulseAge, delta);
+            StepLabelPulse(lookAheadPowerUpLabel, ref _lookAheadPulseAge, delta);
+        }
+
+        private static void StepLabelPulse(TMP_Text label, ref float age, float delta)
+        {
+            if (age < 0f || label == null) return;
+            age += delta;
+            if (age >= CounterTickDuration)
+            {
+                age = -1f;
+                label.transform.localScale = Vector3.one;
+                return;
+            }
+            float t = Mathf.Clamp01(age / CounterTickDuration);
+            float scale = ScoreFeedbackController.EvaluateCounterPulse(t, 1f, CounterTickScale);
+            label.transform.localScale = Vector3.one * scale;
         }
 
         /// <summary>
@@ -406,7 +443,26 @@ namespace UI
 
             if (session != null && movesLabel != null)
             {
-                movesLabel.text = session.MovesRemaining.ToString();
+                if (!_hasMovesDefaultColor)
+                {
+                    _movesDefaultColor = movesLabel.color;
+                    _hasMovesDefaultColor = true;
+                }
+                int moves = session.MovesRemaining;
+                movesLabel.text = moves.ToString();
+                movesLabel.color = (moves > 0 && moves <= 3)
+                    ? new Color(1.0f, 0.45f, 0.25f, 1.0f)
+                    : _movesDefaultColor;
+                if (_lastMovesRemaining >= 0 && _lastMovesRemaining != moves)
+                {
+                    _movesPulseAge = 0f;
+                    StepLabelPulse(movesLabel, ref _movesPulseAge, 0f);
+                }
+                _lastMovesRemaining = moves;
+            }
+            else
+            {
+                _lastMovesRemaining = -1;
             }
 
             if (lookAheadPowerUpButton != null)
@@ -432,11 +488,25 @@ namespace UI
 
             // Delete Power-up
             int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);
-            UpdateButtonState(deletePowerUpButton, deletePowerUpLabel, canUse && deleteUses > 0, deleteUses.ToString());
+            string deleteText = deleteUses.ToString();
+            UpdateButtonState(deletePowerUpButton, deletePowerUpLabel, canUse && deleteUses > 0, deleteText);
+            if (_lastDeleteText != null && _lastDeleteText != deleteText)
+            {
+                _deletePulseAge = 0f;
+                StepLabelPulse(deletePowerUpLabel, ref _deletePulseAge, 0f);
+            }
+            _lastDeleteText = deleteText;
 
             // Level Up Power-up
             int levelUpUses = PowerUpStore.Uses(GameController.PowerUpType.levelUp);
-            UpdateButtonState(levelUpPowerUpButton, levelUpPowerUpLabel, canUse && levelUpUses > 0, levelUpUses.ToString());
+            string levelUpText = levelUpUses.ToString();
+            UpdateButtonState(levelUpPowerUpButton, levelUpPowerUpLabel, canUse && levelUpUses > 0, levelUpText);
+            if (_lastLevelUpText != null && _lastLevelUpText != levelUpText)
+            {
+                _levelUpPulseAge = 0f;
+                StepLabelPulse(levelUpPowerUpLabel, ref _levelUpPulseAge, 0f);
+            }
+            _lastLevelUpText = levelUpText;
 
             // Look Ahead Power-up
             int lookAheadUses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
@@ -445,6 +515,12 @@ namespace UI
                 ? game.LookAheadTurnsRemaining.ToString()
                 : lookAheadUses.ToString();
             UpdateButtonState(lookAheadPowerUpButton, lookAheadPowerUpLabel, canUseLookAhead, lookAheadText);
+            if (_lastLookAheadText != null && _lastLookAheadText != lookAheadText)
+            {
+                _lookAheadPulseAge = 0f;
+                StepLabelPulse(lookAheadPowerUpLabel, ref _lookAheadPulseAge, 0f);
+            }
+            _lastLookAheadText = lookAheadText;
         }
 
         /// <summary>
@@ -658,14 +734,14 @@ namespace UI
 
         private void HideAllOverlayPanels()
         {
-            SetPanelActive(winPanel, false);
-            SetPanelActive(lossPanel, false);
-            SetPanelActive(endlessLossPanel, false);
-            SetPanelActive(tutorialPanel, false);
-            SetPanelActive(levelUpPanel, false);
-            SetPanelActive(powerUpPanel_Delete, false);
-            SetPanelActive(powerUpPanel_LookAhead, false);
-            SetPanelActive(powerUpPanel_LevelUp, false);
+            if (winPanel != null) winPanel.SetActive(false);
+            if (lossPanel != null) lossPanel.SetActive(false);
+            if (endlessLossPanel != null) endlessLossPanel.SetActive(false);
+            if (tutorialPanel != null) tutorialPanel.SetActive(false);
+            if (levelUpPanel != null) levelUpPanel.SetActive(false);
+            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
+            if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
+            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
         }
 
         private void UpdatePlayOrStartPanels()
@@ -677,10 +753,7 @@ namespace UI
 
         private static void SetPanelActive(GameObject panel, bool active)
         {
-            if (panel != null)
-            {
-                panel.SetActive(active);
-            }
+            UIPanelAnimator.SetAnimatedActive(panel, active);
         }
 
         private static void UpdateButtonState(Button button, TMP_Text label, bool interactable, string labelText)

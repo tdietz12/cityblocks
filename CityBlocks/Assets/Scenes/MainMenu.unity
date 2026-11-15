@@ -270,6 +270,7 @@ GameObject:
   - component: {fileID: 284149284}
   - component: {fileID: 284149283}
   - component: {fileID: 284149282}
+  - component: {fileID: 284149285}
   m_Layer: 0
   m_Name: Settings
   m_TagString: Untagged
@@ -379,6 +380,27 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 284149280}
   m_CullTransparentMesh: 1
+--- !u!114 &284149285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 284149280}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 0
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 0}
+  _arrowNudgeDistance: 5
 --- !u!1001 &413824034
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2087,6 +2109,7 @@ GameObject:
   - component: {fileID: 1134057924}
   - component: {fileID: 1134057930}
   - component: {fileID: 1134057931}
+  - component: {fileID: 1134057932}
   m_Layer: 5
   m_Name: StoreButton
   m_TagString: Untagged
@@ -2230,6 +2253,27 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1134057932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1134057922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 0
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 905657732}
+  _arrowNudgeDistance: 5
 --- !u!1 &1156088185
 GameObject:
   m_ObjectHideFlags: 0
@@ -2903,6 +2947,8 @@ GameObject:
   - component: {fileID: 1523253218}
   - component: {fileID: 1523253217}
   - component: {fileID: 1523253216}
+  - component: {fileID: 1523253221}
+  - component: {fileID: 1523253220}
   m_Layer: 5
   m_Name: StartPanel
   m_TagString: Untagged
@@ -2995,6 +3041,45 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
+--- !u!114 &1523253220
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1523253215}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ed47888e8cd2f4649ad823da8a6b1329, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIPanelAnimator
+  _canvasGroup: {fileID: 1523253221}
+  _cardTransform: {fileID: 651531162}
+  _staggeredButtons:
+  - {fileID: 284149285}
+  - {fileID: 5246771479528106197}
+  - {fileID: 1664070456}
+  - {fileID: 1134057932}
+  _startScale: 0.82
+  _overshootScale: 1.04
+  _entranceDuration: 0.22
+  _fadeDuration: 0.16
+  _buttonStaggerDelay: 0.04
+  _shakeOnEnable: 0
+  _shakeAmplitude: 8
+  _gentleBannerPulse: 0
+--- !u!225 &1523253221
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1523253215}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &1580140760
 GameObject:
   m_ObjectHideFlags: 0
@@ -3240,6 +3325,7 @@ GameObject:
   - component: {fileID: 1664070451}
   - component: {fileID: 1664070454}
   - component: {fileID: 1664070455}
+  - component: {fileID: 1664070456}
   m_Layer: 5
   m_Name: EndlessButton
   m_TagString: Untagged
@@ -3396,6 +3482,27 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &1664070456
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1664070449}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
+  _pressScale: 0.92
+  _pressDuration: 0.07
+  _releaseOvershoot: 1.08
+  _releaseDuration: 0.18
+  _enableIdlePulse: 1
+  _idlePulseScale: 1.035
+  _idlePulseFrequency: 1.8
+  _arrowGraphic: {fileID: 1059418714}
+  _arrowNudgeDistance: 5
 --- !u!1 &1697641560
 GameObject:
   m_ObjectHideFlags: 0
@@ -4842,6 +4949,11 @@ PrefabInstance:
       propertyPath: m_Name
       value: LevelButton
       objectReference: {fileID: 0}
+    - target: {fileID: 5617674026567858106, guid: 93b995966886c46ebb061c3174f40575,
+        type: 3}
+      propertyPath: _arrowGraphic
+      value: 
+      objectReference: {fileID: 1905063819}
     - target: {fileID: 6573644273534957080, guid: 93b995966886c46ebb061c3174f40575,
         type: 3}
       propertyPath: m_text
@@ -5152,6 +5264,18 @@ MonoBehaviour:
   m_FlexibleWidth: -1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5246771479528106197 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5617674026567858106, guid: 93b995966886c46ebb061c3174f40575,
+    type: 3}
+  m_PrefabInstance: {fileID: 5246771479528106193}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5246771479528106194}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f204d5acf732420ba5d6fcb24008c0d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::UI.UIButtonAnimator
 --- !u!4 &5516695138849690021
 Transform:
   m_ObjectHideFlags: 0

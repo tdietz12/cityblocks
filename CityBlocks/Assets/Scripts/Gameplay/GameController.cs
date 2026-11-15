@@ -489,8 +489,8 @@ namespace Gameplay
                     break;
 
                 case PowerUpType.lookAhead:
-                    if (playPanel != null) playPanel.SetActive(true);
-                    if (powerUpPanel_LookAhead != null) powerUpPanel_LookAhead.SetActive(false);
+                    if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
+                    if (powerUpPanel_LookAhead != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_LookAhead, false);
                     break;
 
                 case PowerUpType.levelUp:
@@ -518,8 +518,8 @@ namespace Gameplay
             Destroy(removed);
             grid.ResolveGravity(col);
 
-            if (playPanel != null) playPanel.SetActive(true);
-            if (powerUpPanel_Delete != null) powerUpPanel_Delete.SetActive(false);
+            if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
+            if (powerUpPanel_Delete != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_Delete, false);
 
             StartCoroutine(SaveLevelAfterMove());
         }
@@ -536,8 +536,8 @@ namespace Gameplay
             towerCtrl.merge = true;
             grid.DamageAdjacentBreakables(col, row);
 
-            if (playPanel != null) playPanel.SetActive(true);
-            if (powerUpPanel_LevelUp != null) powerUpPanel_LevelUp.SetActive(false);
+            if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
+            if (powerUpPanel_LevelUp != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_LevelUp, false);
 
             StartCoroutine(SaveLevelAfterMove());
         }
@@ -549,7 +549,7 @@ namespace Gameplay
             RecordBoosterUse();
             LevelFlow.ActiveSession.GrantExtraTurns(3);
 
-            if (playPanel != null) playPanel.SetActive(true);
+            if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
         }
 
         /// <summary>
@@ -878,8 +878,8 @@ namespace Gameplay
             if (prepLevelUpPanel)
             {
                 prepLevelUpPanel = false;
-                if (levelUpPanel != null) levelUpPanel.SetActive(true);
-                if (playPanel != null) playPanel.SetActive(false);
+                if (levelUpPanel != null) UI.UIPanelAnimator.SetAnimatedActive(levelUpPanel, true);
+                if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, false);
                 state = GameState.levelUp;
             }
         }
@@ -912,8 +912,8 @@ namespace Gameplay
                     }
                     else
                     {
-                        if (losePanel != null) losePanel.SetActive(true);
-                        if (playPanel != null) playPanel.SetActive(false);
+                        if (losePanel != null) UI.UIPanelAnimator.SetAnimatedActive(losePanel, true);
+                        if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, false);
                     }
 
                     if (levelDefinition == null && !endlessFinished)

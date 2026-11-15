@@ -316,12 +316,8 @@ namespace UI
                 {
                     scale *= Mathf.Lerp(0.75f, 1f, envelope);
                 }
-                else if (time > _popDuration)
-                {
-                    scale *= 1f + 0.03f * Mathf.Sin((time - _popDuration) * 7.5f);
-                }
 
-                // Guarantee that even with elastic overshoot + sine pulse, the text never exceeds screen width
+                // Guarantee that even with elastic overshoot, the text never exceeds screen width
                 scale = Mathf.Min(scale, _headlineOvershootScale) * _fitBaseScale;
 
                 float wobble = Mathf.Sin(time * 20f) * Mathf.Exp(-time * 4.5f) * 3.5f;
