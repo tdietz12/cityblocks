@@ -34,7 +34,7 @@ namespace UI
             bool unlocked = LevelProgressStore.Load().completedLevels.Contains(endlessUnlockLevel);
             button.interactable = unlocked;
             if (label != null)
-                label.text = unlocked ? "ENDLESS" : "ENDLESS\nCLEAR LEVEL " + endlessUnlockLevel;
+                label.text = unlocked ? "Endless Mode" : "Endless Mode\nClear Level " + endlessUnlockLevel;
         }
 
         public void ButtonPress()

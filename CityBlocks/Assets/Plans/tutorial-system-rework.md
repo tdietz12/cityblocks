@@ -133,3 +133,91 @@ Players receive buildings from a queue and place them onto available grid column
 5. **No Parameter Configuration Required**:
    - Verify any prefab with visual elements (images, text) can simply be dropped into `LevelDefinition.tutorialSteps` and works out-of-the-box.
    - Open Endless Mode: Verify game starts normally, HUD displays correctly, and tutorial container remains inactive.
+
+---
+
+# Objective Cards Extension — Current Requested Scope
+
+This revision adds objective-card work to the existing plan. Implement only this extension for the current request; do not repeat or change the earlier tutorial rework.
+
+# Project Overview
+- Game Title: City Blocks.
+- High-Level Concept: Single-player tower-merging puzzle game. Campaign players must satisfy every configured level objective while managing board space and move limits.
+- Players: Single player.
+- Inspiration / Reference Games: Existing plan references 2048 and Triple Town; no new design direction.
+- Tone / Art Direction: Preserve the existing colorful city aesthetic and compact mobile cards.
+- Target Platform: iOS, as currently configured.
+- Screen Orientation / Resolution: Portrait; retain the existing CanvasScaler and layouts (prior plan reference: 1080x1920).
+- Render Pipeline: URP-HighFidelity, Unity 6000.4.5f1.
+
+# Game Mechanics
+## Core Gameplay Loop
+Place and merge towers, gain score, and meet every objective in `LevelSession.Definition.objectives`. Objective cards expose the actual win requirements without changing gameplay or completion checks.
+
+## Controls and Input Methods
+No new controls. Retain the Legacy Input Manager, current touch/click handling, and existing start/pause buttons. Objective icons and numbers are display-only and must not intercept gameplay raycasts.
+
+# UI
+## Confirmed Display Behavior
+User selected: **required target on StartPanel; current and target on ScorePanel**.
+- StartPanel: one icon and the required target per objective, e.g. tower icon `6`, score icon `1000`.
+- ScorePanel: the matching icon with `current / target`, e.g. tower icon `2 / 6`, score icon `450 / 1000`.
+- Tower progress comes from `game.level` (highest achieved tier), not a count of buildings or the tallest tower currently present. Score progress comes from `game.score`. These match `LevelSession.ObjectivesMet()`.
+- Preserve actual current values, including values exceeding the target; do not substitute remaining amounts.
+- Retain authored objective order. Include every objective, including completed ones; hide unused rows.
+- Hide both objective cards in Endless mode or when there are no objectives. Do not invent obstacle-clearing goals or treat the move limit as an objective; moves already have a separate card.
+
+## Wireframe
+```
+StartPanel / Panel / ObjectivesCard    ScorePanel / Panel / ObjectivesCard
++---------------------------+         +---------------------------+
+| [Tower icon]       6      |         | [Tower icon]     2 / 6     |
+| [Score icon]       1000   |         | [Score icon]   450 / 1000  |
++---------------------------+         +---------------------------+
+```
+Reuse existing icon/number styling. Use distinct, recognizable tower and score sprites, assigned explicitly in the Inspector. Inspect existing images visually before mapping generically named Vector assets; use a recognizable existing tower icon and a neutral points/score symbol, not currency or an unrelated power-up. If existing art cannot represent score clearly, obtain user confirmation before adding artwork.
+
+# Key Asset & Context
+- `Assets/Scripts/UI/LevelRulesUI.cs`: currently has no objective references or presentation logic. Add serialized references for the two cards and objective-type sprites, and centralize target/progress refresh.
+- `Assets/Scripts/UI/ObjectiveCardUI.cs` (new): small reusable uGUI presenter for an ordered list of rows, each with a root, `UnityEngine.UI.Image`, and `TMP_Text`. Proposed API: `Bind(LevelDefinition definition, bool showProgress, Sprite towerIcon, Sprite scoreIcon)` and `Refresh(int highestTowerLevel, int score)`. Cache rows and bound values; do not recreate UI each frame.
+- `Assets/Scenes/EndlessMode.unity`: the loaded `Game/LevelRulesUI` is a standalone scene hierarchy, not a connected prefab instance. Both cards already exist at `ScorePanel/Panel/ObjectivesCard` and `StartPanel/Panel/ObjectivesCard`, with Row1–Row3, Icon, and Text children. They currently contain static placeholders `5 / 6`, `40`, and `20`.
+- `Assets/Prefabs/UI/LevelRulesUI.prefab`: separate reusable asset; content search found no ObjectivesCard rows. Add corresponding cards using the scene styling and bind the presenter references without replacing the whole scene UI or overwriting unrelated prefab content.
+- `Assets/Scripts/Gameplay/LevelDefinition.cs`: read-only context; `LevelObjectiveType` currently has `ReachTowerLevel` and `ReachScore`; each objective has `type` and `target`. All 100 level assets were inspected; the current maximum is two objectives.
+- `Assets/Scripts/Gameplay/LevelSession.cs`: read-only context; `Initialize()` binds UI, `ResolveMove()` refreshes it, and `ObjectivesMet()` checks all targets. No changes to objective semantics, saves, tutorials, or analytics.
+- Existing `Assets/UI/` and `Assets/UI/FigmaImport/EndlessMode/` sprites and existing TMP font assets: reuse; no font or package changes.
+- Impact inspected using AssetDatabase dependency queries: the prefab and scene reference LevelRulesUI; `Assets/_Recovery/0.unity` references the prefab. Do not directly edit recovery scenes. Recheck dependencies/dependents before implementing edits, using the dependency tool if available or read-only AssetDatabase queries otherwise.
+
+# Implementation Steps
+1. **Build the shared objective-card presenter**
+   - Create `Assets/Scripts/UI/ObjectiveCardUI.cs` following project namespace and serialized-field conventions.
+   - Bind each valid objective to its icon and target/progress format. Handle null definition, empty list, and missing UI references safely; report unsupported types rather than displaying the wrong icon.
+   - Reuse Row1–Row3; disable unused rows. If future definitions exceed the available rows, instantiate additional rows from a configured template once at binding, with layout accommodating all rows; never silently truncate objectives.
+   - Use vertical row layout and stable icon/text alignment, preserving the current compact card appearance. Disable raycastTarget on decorative icons/text.
+   - Dependencies: inspected objective data model; no gameplay edits.
+2. **Integrate with LevelRulesUI**
+   - Modify `Assets/Scripts/UI/LevelRulesUI.cs` to reference both presenters and tower/score sprites.
+   - In `Bind()`, bind StartPanel with targets and ScorePanel with progress from the same level definition.
+   - In `Refresh()`, update both cards from `game.level` and `game.score`, including pause, resume, retry, next level, and restored runs.
+   - In `InitializeEndlessMode()`, clear bindings and hide the cards to avoid stale campaign goals.
+   - Preserve existing tutorial visibility and all menu/gameplay flow. Use existing refresh paths; add no polling or subscriptions unless verification proves a progress update is missed.
+   - Dependencies: Step 1.
+3. **Wire the standalone scene and reusable prefab**
+   - Modify `Assets/Scenes/EndlessMode.unity`: add presenters to existing cards, assign row/icon/text references, remove visible placeholder defaults, and assign presenters/sprites on LevelRulesUI.
+   - Modify `Assets/Prefabs/UI/LevelRulesUI.prefab`: add corresponding cards only where absent, maintain visual consistency, and serialize the same bindings.
+   - Check compact progress text accommodates five-digit score targets and additional rows without colliding with the score, moves, or Play button.
+   - Dependencies: Steps 1–2 and sprite inspection.
+4. **Verify objective presentation and regressions**
+   - Run compilation, presenter checks, campaign Play Mode checks, and Endless mode checks below.
+   - Adjust only objective-card spacing or refresh integration if a test fails; no unrelated UI redesign.
+   - Dependencies: Steps 1–3.
+
+# Verification & Testing
+- **Mapping/format tests:** ReachTowerLevel target 6 => Start `6`, HUD `2 / 6`; ReachScore target 1000 => Start `1000`, HUD `450 / 1000`. Verify mixed objectives retain order and type icons.
+- **Progress semantics:** Initial starting towers and restored scores appear immediately. After merge/score resolution, HUD shows the updated highest achieved tier and score; removal of a tower does not reduce historical tower progress. Current values greater than target remain accurate.
+- **Row lifecycle:** Check one, two, three, and more-than-three objectives using temporary in-memory definitions rather than editing production levels. All goals appear; unused rows are hidden; rebind to a smaller level removes stale extra rows.
+- **No-objective cases:** Null/empty definitions and Endless mode show neither placeholder rows nor stale campaign objectives; regular score/record HUD stays visible.
+- **Flow tests:** Start, pause, resume, tutorial overlay, retry, next level, and restored campaign runs show the correct level's targets and progress. StartPanel remains target-only even after pausing mid-level.
+- **Asset wiring:** Verify both standalone scene objects and the prefab have complete serialized references and distinct correct sprites; no missing scripts or dangling references.
+- **Mobile layout:** Check portrait Game View on small and tall iPhone aspect ratios, long score values, row/icon alignment, readable TMP text, and no overlap or accidental input blocking.
+- **Regression:** Existing `ObjectivesMet()` still requires all configured objectives; moves, win/loss, power-ups, and tutorial interaction behave unchanged.
+- **Compilation/build:** No new console errors; run existing tests if available and an iOS build validation where the installed toolchain permits it. Report unavailable device/build checks rather than claiming they passed.

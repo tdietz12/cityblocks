@@ -54,22 +54,22 @@ namespace UI
             bool completed = progress.completedLevels.Contains(target);
             LevelDefinition def = LevelCatalog.Get(target);
 
-            string text = "LEVEL " + target;
+            string text = "Level " + target;
             if (active)
             {
-                text += "\nCONTINUE";
+                text += "\nContinue";
             }
             else if (completed)
             {
-                text += "\nDONE";
+                text += "\nDone";
             }
             else if (def != null && def.difficulty == LevelDifficulty.Hard)
             {
-                text += "\nHARD";
+                text += "\nHard";
             }
             else if (def != null && def.difficulty == LevelDifficulty.VeryHard)
             {
-                text += "\nVERY HARD";
+                text += "\nVery Hard";
             }
 
             if (label != null)

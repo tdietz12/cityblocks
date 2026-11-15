@@ -21,6 +21,12 @@ namespace UI
         [SerializeField] private TMP_Text recordScoreText;
         [SerializeField] private TMP_Text movesLabel;
 
+        [Header("Level Objectives")]
+        [SerializeField] private ObjectiveCardUI scoreObjectivesCard;
+        [SerializeField] private ObjectiveCardUI startObjectivesCard;
+        [SerializeField] private Sprite towerObjectiveIcon;
+        [SerializeField] private Sprite scoreObjectiveIcon;
+
         [Header("Play HUD")]
         [SerializeField] private GameObject playPanel;
         [SerializeField] private Button pauseButton;
@@ -113,6 +119,7 @@ namespace UI
         public void InitializeEndlessMode()
         {
             session = null;
+            BindObjectiveCards(null);
             EnsureGameControllerReference();
 
             if (DataPersistenceController.instance != null && !DataPersistenceController.instance.HasLoaded)
@@ -150,6 +157,7 @@ namespace UI
         {
             session = levelSession;
             game = gameController;
+            BindObjectiveCards(session != null ? session.Definition : null);
 
             RegisterListeners();
             HideAllOverlayPanels();
@@ -348,6 +356,12 @@ namespace UI
             }
         }
 
+        private void BindObjectiveCards(LevelDefinition definition)
+        {
+            if (scoreObjectivesCard != null) scoreObjectivesCard.Bind(definition, true, towerObjectiveIcon, scoreObjectiveIcon);
+            if (startObjectivesCard != null) startObjectivesCard.Bind(definition, false, towerObjectiveIcon, scoreObjectiveIcon);
+        }
+
         /// <summary>
         /// Refreshes all HUD texts: scores, moves remaining, and power-up buttons.
         /// </summary>
@@ -358,6 +372,8 @@ namespace UI
 
             if (scoreText != null) scoreText.text = game.score.ToString();
             if (recordScoreText != null) recordScoreText.text = game.recordScore.ToString();
+            if (scoreObjectivesCard != null) scoreObjectivesCard.Refresh(game.level, game.score);
+            if (startObjectivesCard != null) startObjectivesCard.Refresh(game.level, game.score);
 
             if (session != null && movesLabel != null)
             {
