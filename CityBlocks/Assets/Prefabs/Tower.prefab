@@ -192,6 +192,7 @@ MonoBehaviour:
     type: 3}
   _slideDuration: 0.14
   _absorptionDuration: 0.12
+  _preMergeDelay: 0.1
   _horizontalChainDelay: 0.15
   _topMergeContactOffset: 0.45
 --- !u!1 &6940232365303135751

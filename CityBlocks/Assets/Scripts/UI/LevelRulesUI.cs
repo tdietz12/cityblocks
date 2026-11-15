@@ -428,7 +428,7 @@ namespace UI
         private void RefreshPowerUps()
         {
             if (game == null) return;
-            bool canUse = game.state == GameController.GameState.play && !game.IsResolvingMove;
+            bool canUse = game.state == GameController.GameState.play && !game.IsResolvingMove && !game.HasPendingComboCelebration;
 
             // Delete Power-up
             int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);

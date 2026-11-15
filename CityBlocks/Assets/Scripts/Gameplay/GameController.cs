@@ -57,6 +57,7 @@ namespace Gameplay
         public int DisplayedScore => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled ? _scoreFeedback.DisplayedScore : score;
         public int DisplayedRecordScore => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled ? _scoreFeedback.DisplayedRecordScore : recordScore;
         public bool HasPendingScoreFeedback => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled && _scoreFeedback.HasPendingFeedback;
+        public bool HasPendingComboCelebration => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled && _scoreFeedback.HasPendingComboCelebration;
 
         public void BindScoreFeedback(ScoreFeedbackController feedback, Camera camera)
         {
@@ -104,16 +105,23 @@ namespace Gameplay
         private bool moveResolving;
         private int _turnMergeCount;
         private bool _comboTurnActive;
+        private bool _isPlacementComboTurn;
         private int _comboTurnId;
         public int CurrentMergeMultiplier => _comboTurnActive ? Mathf.Max(1, _turnMergeCount) : 1;
+        public int TurnMergeCount => _turnMergeCount;
+        public bool IsPlacementComboTurn => _isPlacementComboTurn;
         public int ComboTurnId => _comboTurnId;
         public event System.Action onComboTurnStarted;
         public event System.Action onComboTurnEnded;
+        public event System.Action<int> onPlacementComboCompleted;
 
-        private void BeginComboTurn()
+        private void BeginComboTurn() => BeginComboTurn(true);
+
+        private void BeginComboTurn(bool isTowerPlacement)
         {
             _turnMergeCount = 0;
             _comboTurnActive = true;
+            _isPlacementComboTurn = isTowerPlacement;
             _comboTurnId++;
             onComboTurnStarted?.Invoke();
         }
@@ -122,7 +130,19 @@ namespace Gameplay
         {
             _turnMergeCount = 0;
             _comboTurnActive = false;
+            _isPlacementComboTurn = false;
             onComboTurnEnded?.Invoke();
+        }
+
+        internal void CompleteComboTurnAfterSettlement()
+        {
+            int completedMerges = _turnMergeCount;
+            bool wasPlacementTurn = _comboTurnActive && _isPlacementComboTurn;
+            EndComboTurn();
+            if (wasPlacementTurn && completedMerges >= 3)
+            {
+                onPlacementComboCompleted?.Invoke(completedMerges);
+            }
         }
 
         private LevelDefinition levelDefinition;
@@ -366,7 +386,7 @@ namespace Gameplay
         /// </summary>
         public bool TryBeginPowerUp(PowerUpType type)
         {
-            if (state != GameState.play || moveResolving || PowerUpStore.Uses(type) <= 0) return false;
+            if (state != GameState.play || moveResolving || HasPendingComboCelebration || PowerUpStore.Uses(type) <= 0) return false;
 
             if (type == PowerUpType.lookAhead)
             {
@@ -383,7 +403,7 @@ namespace Gameplay
         /// </summary>
         public bool ActivateLookAhead()
         {
-            if (state != GameState.play || moveResolving || lookAheadTurnsRemaining > 0) return false;
+            if (state != GameState.play || moveResolving || HasPendingComboCelebration || lookAheadTurnsRemaining > 0) return false;
             if (levelDefinition != null && levelDefinition.moveLimit > 0 && LevelFlow.ActiveSession != null &&
                 LevelFlow.ActiveSession.MovesRemaining <= 0) return false;
             if (PowerUpStore.Uses(PowerUpType.lookAhead) <= 0) return false;
@@ -431,7 +451,7 @@ namespace Gameplay
             if (levelDefinition != null && LevelFlow.ActiveSession != null && levelDefinition.moveLimit > 0 &&
                 LevelFlow.ActiveSession.MovesRemaining <= 0) return;
 
-            if (moveResolving || !grid.IsSettled() || queue.towerQueue.Count == 0) return;
+            if (moveResolving || HasPendingComboCelebration || !grid.IsSettled() || queue.towerQueue.Count == 0) return;
 
             if (PlacementFilter != null && !PlacementFilter(col)) return;
 
@@ -490,7 +510,7 @@ namespace Gameplay
         {
             if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
 
-            BeginComboTurn();
+            BeginComboTurn(false);
             moveResolving = true;
             RecordBoosterUse();
             GameObject removed = grid.grid[col, row];
@@ -508,7 +528,7 @@ namespace Gameplay
         {
             if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
 
-            BeginComboTurn();
+            BeginComboTurn(false);
             moveResolving = true;
             RecordBoosterUse();
             TowerController towerCtrl = grid.grid[col, row].GetComponent<TowerController>();
@@ -537,7 +557,7 @@ namespace Gameplay
         /// </summary>
         private void PlayTower(int column, GameObject incomingTower, bool isTopOfColumn)
         {
-            BeginComboTurn();
+            BeginComboTurn(true);
             TotalMoves++;
             moveResolving = true;
             hasActiveRun = true;
@@ -590,7 +610,7 @@ namespace Gameplay
         {
             yield return null;
             yield return new WaitUntil(grid.IsSettled);
-            EndComboTurn();
+            CompleteComboTurnAfterSettlement();
             moveResolving = false;
             onMoveResolved?.Invoke();
 

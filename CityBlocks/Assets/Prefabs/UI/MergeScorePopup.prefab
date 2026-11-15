@@ -166,4 +166,4 @@ MonoBehaviour:
   _label: {fileID: 3262160851001448824}
   _group: {fileID: 4880540952112767446}
   _multiplierBurstDuration: 0.15
-  _multiplierBurstScale: 1.25
+  _multiplierBurstScale: 2

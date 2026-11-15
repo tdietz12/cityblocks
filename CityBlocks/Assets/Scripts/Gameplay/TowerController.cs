@@ -32,6 +32,8 @@ namespace Gameplay
         [Header("Motion")]
         [SerializeField, Min(0f)] private float _slideDuration = 0.14f;
         [SerializeField, Min(0f)] private float _absorptionDuration = 0.12f;
+        [Tooltip("Pause before triggering any merge.")]
+        [SerializeField, Min(0f)] private float _preMergeDelay = 0.1f;
         [Tooltip("Pause before another merge when a horizontal-only batch leaves this tower stationary and no gravity animation is pending.")]
         [SerializeField, Min(0f)] private float _horizontalChainDelay = 0.15f;
         [Tooltip("Visual space below a full-column top tower while it slides into the incoming survivor.")]
@@ -92,11 +94,15 @@ namespace Gameplay
         private void OnDisable()
         {
             StopAllCoroutines();
+            if (transform.parent != null && transform.parent.GetComponent<FallingTowerController>() != null)
+            {
+                transform.SetParent(null, true);
+            }
             foreach (FallingTowerController motion in _absorptions)
             {
                 if (motion == null) continue;
                 TowerController absorbed = motion.GetComponentInChildren<TowerController>(true);
-                if (absorbed != null && grid != null && grid.grid != null &&
+                if (absorbed != null && absorbed != this && grid != null && grid.grid != null &&
                     grid.grid[absorbed.col, absorbed.row] == absorbed.gameObject)
                     grid.grid[absorbed.col, absorbed.row] = null;
                 Destroy(motion.gameObject);
@@ -152,12 +158,18 @@ namespace Gameplay
             _forcedTopMatch = null;
             if (top == null) { drop = true; yield break; }
             int topRow = top.row;
-            // Stay just below the top cell so even this special merge has a visible absorption path.
-            yield return SlideTo(grid.WorldPosition(col, topRow) + Vector3.forward * _topMergeContactOffset);
-            yield return Absorb(new List<TowerController> { top });
+            Vector3 targetPosition = grid.WorldPosition(col, topRow);
+            // Slide to contact just above the top tower, pause 0.1s, then merge down into it while shrinking the top tower.
+            yield return SlideTo(targetPosition - Vector3.forward * _topMergeContactOffset);
+            if (_preMergeDelay > 0f && _slideDuration > 0f)
+            {
+                yield return new WaitForSeconds(_preMergeDelay);
+            }
+            yield return Absorb(new List<TowerController> { top }, slideSelfDownToTarget: true, selfSlideDestination: targetPosition, shrinkTargetDuringSelfSlide: top);
             grid.grid[col, row] = null;
             row = topRow;
             grid.grid[col, row] = gameObject;
+            transform.position = targetPosition;
             level++;
             DisplayTowerForCurrentLevel(level);
             grid.game.AwardMergeScore(level, transform.position);
@@ -196,17 +208,40 @@ namespace Gameplay
             AddMatchingNeighbour(matches, col + 1, row);
             if (matches.Count == 0) yield break;
 
-            bool onlyHorizontal = true;
+            if (_preMergeDelay > 0f && _absorptionDuration > 0f)
+            {
+                yield return new WaitForSeconds(_preMergeDelay);
+                matches.Clear();
+                AddMatchingNeighbour(matches, col, row - 1);
+                AddMatchingNeighbour(matches, col, row + 1);
+                AddMatchingNeighbour(matches, col - 1, row);
+                AddMatchingNeighbour(matches, col + 1, row);
+                if (matches.Count == 0) yield break;
+            }
+
+            TowerController lowerNeighbour = null;
             HashSet<int> gravityColumns = new HashSet<int> { col };
             List<Vector2Int> levelUpCells = new List<Vector2Int> { new Vector2Int(col, row) };
             foreach (TowerController neighbour in matches)
             {
-                onlyHorizontal &= neighbour.row == row && neighbour.col != col;
+                if (neighbour.col == col && neighbour.row == row - 1) lowerNeighbour = neighbour;
                 levelUpCells.Add(new Vector2Int(neighbour.col, neighbour.row));
                 gravityColumns.Add(neighbour.col);
             }
-            // No gravity or logical removal is allowed until every presentation reaches us.
-            yield return Absorb(matches);
+
+            Vector3 mergeDestination = lowerNeighbour != null ? grid.WorldPosition(col, lowerNeighbour.row) : transform.position;
+            // Vertical merge: slide the upper tower down into the lower tower while shrinking the lower tower.
+            // Horizontal merge: shrink horizontal neighbours into the falling/surviving tower.
+            yield return Absorb(matches, slideSelfDownToTarget: lowerNeighbour != null, selfSlideDestination: mergeDestination, shrinkTargetDuringSelfSlide: lowerNeighbour);
+            if (lowerNeighbour != null)
+            {
+                int oldRow = row;
+                int targetRow = lowerNeighbour.row;
+                if (grid.grid[col, oldRow] == gameObject) grid.grid[col, oldRow] = null;
+                row = targetRow;
+                grid.grid[col, row] = gameObject;
+                transform.position = mergeDestination;
+            }
             level += matches.Count;
             DisplayTowerForCurrentLevel(level);
             foreach (int affectedColumn in grid.DamageAdjacentBreakables(levelUpCells, false))
@@ -216,30 +251,47 @@ namespace Gameplay
             PlayMergeFeedback();
             foreach (int affectedColumn in gravityColumns) grid.ResolveGravity(affectedColumn);
             if (grid.FindLandingRow(col, row) != row) drop = true;
-            else
-            {
-                if (onlyHorizontal && !grid.HasPendingMovement(this) && _horizontalChainDelay > 0f)
-                {
-                    matches.Clear();
-                    AddMatchingNeighbour(matches, col, row - 1);
-                    AddMatchingNeighbour(matches, col, row + 1);
-                    AddMatchingNeighbour(matches, col - 1, row);
-                    AddMatchingNeighbour(matches, col + 1, row);
-                    if (matches.Count > 0) yield return new WaitForSeconds(_horizontalChainDelay);
-                }
-                merge = true;
-            }
+            else merge = true;
         }
 
-        private IEnumerator Absorb(List<TowerController> matches)
+        private IEnumerator Absorb(List<TowerController> matches, bool slideSelfDownToTarget = false, Vector3 selfSlideDestination = default, TowerController shrinkTargetDuringSelfSlide = null)
         {
             grid.NotifyMergeStarted();
+            Vector3 destination = slideSelfDownToTarget ? selfSlideDestination : transform.position;
+            Transform originalParent = transform.parent;
+
+            if (slideSelfDownToTarget)
+            {
+                GameObject selfProxy = fallingTowerPrefab != null
+                    ? Instantiate(fallingTowerPrefab, transform.position, Quaternion.identity)
+                    : new GameObject("Tower vertical merge");
+                selfProxy.transform.position = transform.position;
+                FallingTowerController selfMotion = selfProxy.GetComponent<FallingTowerController>();
+                if (selfMotion == null) selfMotion = selfProxy.AddComponent<FallingTowerController>();
+                transform.SetParent(selfProxy.transform, true);
+                selfMotion.BeginSlide(
+                    destination,
+                    _absorptionDuration,
+                    shrinkSelf: false,
+                    shrinkTarget: shrinkTargetDuringSelfSlide != null ? shrinkTargetDuringSelfSlide.transform : null,
+                    hideOnComplete: false);
+                _absorptions.Add(selfMotion);
+            }
+
             foreach (TowerController neighbour in matches)
             {
                 neighbour.enabled = false;
                 neighbour.drop = false;
                 neighbour.merge = false;
                 neighbour._reservedForAbsorption = true;
+
+                if (slideSelfDownToTarget && neighbour == shrinkTargetDuringSelfSlide)
+                {
+                    // Stationary lower tower stays in place and shrinks via selfMotion while the sliding tower merges down into it.
+                    continue;
+                }
+
+                bool isVerticalUpper = neighbour.col == col && neighbour.row > row;
                 GameObject proxy = fallingTowerPrefab != null
                     ? Instantiate(fallingTowerPrefab, neighbour.transform.position, Quaternion.identity)
                     : new GameObject("Tower absorption");
@@ -248,7 +300,12 @@ namespace Gameplay
                 if (motion == null) motion = proxy.AddComponent<FallingTowerController>();
                 // Move the entire root, including its number canvas, not just the building model.
                 neighbour.transform.SetParent(proxy.transform, true);
-                motion.BeginSlide(transform.position, _absorptionDuration);
+                motion.BeginSlide(
+                    destination,
+                    _absorptionDuration,
+                    shrinkSelf: !isVerticalUpper,
+                    shrinkTarget: isVerticalUpper && !slideSelfDownToTarget ? transform : null,
+                    hideOnComplete: true);
                 _absorptions.Add(motion);
             }
             bool waiting = true;
@@ -259,12 +316,18 @@ namespace Gameplay
                     if (motion != null && !motion.IsComplete) { waiting = true; break; }
                 if (waiting) yield return null;
             }
+            if (transform.parent != originalParent)
+            {
+                transform.SetParent(originalParent, true);
+            }
+            transform.localScale = Vector3.one;
             foreach (TowerController neighbour in matches)
             {
                 if (neighbour == null) continue;
                 if (grid.grid[neighbour.col, neighbour.row] == neighbour.gameObject)
                     grid.grid[neighbour.col, neighbour.row] = null;
                 grid.towersInPlay.Remove(neighbour.gameObject);
+                Destroy(neighbour.gameObject);
             }
             foreach (FallingTowerController motion in _absorptions)
                 if (motion != null) Destroy(motion.gameObject);

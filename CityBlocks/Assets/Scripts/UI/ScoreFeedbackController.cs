@@ -14,6 +14,7 @@ namespace UI
         [SerializeField] private Camera _gameplayCamera;
         [SerializeField] private MergeMultiplierCounter _multiplierCounter;
         [SerializeField] private MergeMultiplierToken _multiplierTokenPrefab;
+        [SerializeField] private ComboCelebrationController _comboCelebration;
         [SerializeField, Min(0f)] private float _multiplierFlightDuration = 0.35f;
         private readonly List<MergeMultiplierToken> _tokens = new List<MergeMultiplierToken>();
         private readonly Stack<MergeMultiplierToken> _tokenPool = new Stack<MergeMultiplierToken>();
@@ -24,7 +25,7 @@ namespace UI
         [SerializeField, Min(0f)] private float _riseDistance = 45f;
         [SerializeField, Min(0f)] private float _worldHeightOffset = 0.7f;
         [SerializeField, Min(0f)] private float _pulseDuration = 0.15f;
-        [SerializeField, Range(1f, 1.3f)] private float _pulseScale = 1.2f;
+        [SerializeField, Range(1f, 3f)] private float _pulseScale = 2.0f;
         private readonly List<MergeScorePopup> _active = new List<MergeScorePopup>();
         private readonly Stack<MergeScorePopup> _pool = new Stack<MergeScorePopup>();
         private GameController _game;
@@ -39,8 +40,10 @@ namespace UI
         public event System.Action onDisplayedScoreChanged;
         public int DisplayedScore => _game == null ? 0 : Mathf.Max(0, _game.score - _pendingPoints);
         public int DisplayedRecordScore => Mathf.Max(_recordBaseline, HasPendingFeedback || _game == null ? DisplayedScore : _game.recordScore);
+        public bool HasPendingComboCelebration => _comboCelebration != null && _comboCelebration.IsCelebrating;
+        public ComboCelebrationController ComboCelebration => _comboCelebration;
         public bool HasPendingFeedback => _active.Count > 0 || _tokens.Count > 0 || _pulsing ||
-            (_multiplierCounter != null && _multiplierCounter.HasPendingPulse);
+            (_multiplierCounter != null && _multiplierCounter.HasPendingPulse) || HasPendingComboCelebration;
         internal float CounterPulseDuration => _pulseDuration;
         internal float CounterPulseScale => _pulseScale;
         internal static float EvaluateCounterPulse(float t, float from, float peak)
@@ -56,7 +59,15 @@ namespace UI
 
         public void Bind(GameController game, Camera gameplayCamera)
         {
-            if (_game == game && (gameplayCamera == null || _gameplayCamera == gameplayCamera)) return;
+            if (_comboCelebration == null && transform.parent != null)
+            {
+                _comboCelebration = transform.parent.GetComponentInChildren<ComboCelebrationController>(true);
+            }
+            if (_game == game && (gameplayCamera == null || _gameplayCamera == gameplayCamera))
+            {
+                if (_comboCelebration != null) _comboCelebration.Bind(_game);
+                return;
+            }
             ClearAndSynchronize();
             if (_grid != null) _grid.onBoardCleared -= ClearAndSynchronize;
             UnsubscribeGame();
@@ -74,6 +85,7 @@ namespace UI
             _canvas = _popupLayer != null ? _popupLayer.GetComponentInParent<Canvas>() : null;
             if (_pulseTarget != null) _baseScale = _pulseTarget.localScale;
             if (_multiplierCounter != null) _multiplierCounter.Bind(_game, _gameplayCamera, _popupLayer, _pulseDuration, _pulseScale);
+            if (_comboCelebration != null) _comboCelebration.Bind(_game);
             onDisplayedScoreChanged?.Invoke();
         }
 
@@ -139,6 +151,7 @@ namespace UI
         public void Advance(float delta)
         {
             if (_multiplierCounter != null) _multiplierCounter.Advance(delta);
+            if (_comboCelebration != null) _comboCelebration.Advance(delta);
             if (_active.Count > 0)
             {
                 if (_scoreTarget == null || !_scoreTarget.gameObject.activeInHierarchy || _popupLayer == null)
@@ -203,6 +216,7 @@ namespace UI
                 if (token != null) { token.Cancel(); _tokenPool.Push(token); }
             _tokens.Clear();
             if (_multiplierCounter != null) _multiplierCounter.ResetCounter();
+            if (_comboCelebration != null) _comboCelebration.ClearImmediate();
             _pendingPoints = 0;
             _pulsing = false;
             if (_pulseTarget != null) _pulseTarget.localScale = _baseScale;

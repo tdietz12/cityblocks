@@ -7,7 +7,7 @@ namespace UI
         [SerializeField] private TMPro.TMP_Text _label;
         [SerializeField] private CanvasGroup _group;
         [SerializeField, Min(0f)] private float _multiplierBurstDuration = 0.15f;
-        [SerializeField, Range(1f, 1.5f)] private float _multiplierBurstScale = 1.25f;
+        [SerializeField, Range(1f, 3f)] private float _multiplierBurstScale = 2.0f;
         private bool _bursting;
         private float _burstAge;
         private float _burstFrom;

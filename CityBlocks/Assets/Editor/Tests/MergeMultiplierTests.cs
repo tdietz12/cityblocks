@@ -93,7 +93,10 @@ namespace CityBlocks.EditorTests
                 Call(feedback, "Advance", 0.2f);
                 Check(held.GetComponent<TMPro.TMP_Text>().text == "+60" && (int)Property(game, "DisplayedScore") == 240, "Slow token application or pending accounting failed");
                 Call(feedback, "Advance", 0.05f);
-                Check(held.transform.localScale.x > 1f && held.transform.localScale.x <= 1.25f, "Multiplied score did not burst");
+                float popupBurstScale = (float)Get(held, "_multiplierBurstScale");
+                float feedbackPulseScale = (float)Get(feedback, "_pulseScale");
+                Check(popupBurstScale >= 2f && feedbackPulseScale >= 2f, "Multiplier, score, and flying number burst scales must be at least 2x");
+                Check(held.transform.localScale.x > 1.5f && held.transform.localScale.x <= popupBurstScale + 0.001f, "Multiplied score did not burst to double size");
                 Check((int)Property(game, "DisplayedScore") == 240, "Score collected during its multiplication burst");
                 Call(feedback, "Advance", 0.11f);
                 Call(feedback, "Advance", 0.14f);
