@@ -29,9 +29,52 @@ namespace Gameplay
         private bool[,] available;
         public List<GameObject> towersInPlay = new List<GameObject>();
 
+        public event System.Action onMergeStarted;
+        public event System.Action onMergeCompleted;
+        public event System.Action onBoardCleared;
+        internal void NotifyMergeStarted() => onMergeStarted?.Invoke();
+        internal void NotifyMergeCompleted() => onMergeCompleted?.Invoke();
+
+        private TowerController _mergeOwner;
+        internal bool CanAnimate(TowerController tower) => _mergeOwner == null || _mergeOwner == tower;
+
+        internal bool TryBeginMerge(TowerController tower)
+        {
+            if (_mergeOwner != null && _mergeOwner != tower) return false;
+            _mergeOwner = tower;
+            return true;
+        }
+
+        internal void EndMerge(TowerController tower)
+        {
+            if (_mergeOwner == tower) _mergeOwner = null;
+        }
+
+        internal bool HasPendingMovement(TowerController except)
+        {
+            if (grid == null) return false;
+            for (int column = 0; column < totalColumns; column++)
+                for (int row = 0; row < totalRows; row++)
+                {
+                    if (obstacles != null && obstacles[column, row] != null &&
+                        obstacles[column, row].IsMoving) return true;
+                    GameObject block = grid[column, row];
+                    if (block == null) continue;
+                    TowerController tower = block.GetComponent<TowerController>();
+                    if (tower != except && (tower.drop || tower.IsAnimating)) return true;
+                }
+            return false;
+        }
+
+        public Vector3 VisualEntryPosition(int column)
+        {
+            // The camera makes this top-of-board spawn appear below the board on screen.
+            return WorldPosition(column, totalRows - 1);
+        }
+
         public bool IsSettled()
         {
-            if (towersInPlay.Count > 0 || grid == null) return false;
+            if (_mergeOwner != null || towersInPlay.Count > 0 || grid == null) return false;
             for (int column = 0; column < totalColumns; column++)
                 for (int row = 0; row < totalRows; row++)
                 {
@@ -40,7 +83,7 @@ namespace Gameplay
                     GameObject block = grid[column, row];
                     if (block == null) continue;
                     TowerController tower = block.GetComponent<TowerController>();
-                    if (tower.drop || tower.merge) return false;
+                    if (tower.drop || tower.merge || tower.IsAnimating) return false;
                 }
             return true;
         }
@@ -257,6 +300,8 @@ namespace Gameplay
         /// </summary>
         public void ClearBoard()
         {
+            _mergeOwner = null;
+            onBoardCleared?.Invoke();
             lastIntactBoardState.Clear();
             if (grid != null)
             {
@@ -266,6 +311,7 @@ namespace Gameplay
                     {
                         if (grid[column, row] != null)
                         {
+                            grid[column, row].GetComponent<TowerController>().enabled = false;
                             Destroy(grid[column, row]);
                             grid[column, row] = null;
                         }
@@ -334,6 +380,7 @@ namespace Gameplay
                     {
                         if (grid[column, row] != null)
                         {
+                            grid[column, row].GetComponent<TowerController>().enabled = false;
                             Destroy(grid[column, row]);
                             grid[column, row] = null;
                         }
@@ -389,7 +436,6 @@ namespace Gameplay
                 tower.state = TowerController.TowerState.grid;
                 tower.queue = game.queue;
                 tower.grid = this;
-                tower.onTowerLevelUpEvent += IncrementScore;
                 tower.onTowerLevelUpEvent += IncrementLevel;
                 tower.level = (int)block.z;
                 tower.col = column;

@@ -1,36 +1,37 @@
 using UnityEngine;
-using UnityEngine.Events;
 
 namespace Gameplay
 {
     public class FallingTowerController : MonoBehaviour
     {
         public Vector3 mergeTarget;
+        [SerializeField, Min(0f)] private float _duration = 0.18f;
+        private Vector3 _start;
+        private float _elapsed;
+        private bool _initialized;
+        public bool IsComplete { get; private set; }
 
-        internal UnityEvent DestroyTower;
-
-        void Start()
+        internal void BeginSlide(Vector3 target, float duration)
         {
-            Invoke("DestroyFallingTower", .15f);
+            mergeTarget = target;
+            _duration = Mathf.Max(0f, duration);
+            _start = transform.position;
+            _elapsed = 0f;
+            IsComplete = false;
+            _initialized = true;
         }
 
-        void Update()
+        private void Update()
         {
-            if (Vector3.Distance(transform.position, mergeTarget) < .25f)
-            {
-                transform.position = mergeTarget;
-                transform.localScale = Vector3.one * .5f;
-            }
-            else
-            {
-                transform.position = Vector3.Lerp(transform.position, mergeTarget, .1f);
-                transform.localScale = Vector3.Lerp(transform.localScale, Vector3.one * .5f, .1f);
-            }
-        }
-
-        void DestroyFallingTower()
-        {
-            Destroy(this.gameObject);
+            if (!_initialized || IsComplete) return;
+            _elapsed += Time.deltaTime;
+            float t = _duration <= 0f ? 1f : Mathf.Clamp01(_elapsed / _duration);
+            transform.position = Vector3.LerpUnclamped(_start, mergeTarget, t * t * (3f - 2f * t));
+            if (t < 1f) return;
+            transform.position = mergeTarget;
+            IsComplete = true;
+            // Hide exactly on arrival; the owning batch performs destruction and logical commit.
+            gameObject.SetActive(false);
         }
     }
 }

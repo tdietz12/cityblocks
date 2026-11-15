@@ -51,6 +51,25 @@ namespace Gameplay
         [Header("Score HUD")]
         public TextMeshProUGUI scoreText;
         public TextMeshProUGUI recordScoreText;
+        [SerializeField] private ScoreFeedbackController _scoreFeedback;
+        [SerializeField] private Camera _gameplayCamera;
+        public Camera GameplayCamera => _gameplayCamera;
+        public int DisplayedScore => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled ? _scoreFeedback.DisplayedScore : score;
+        public int DisplayedRecordScore => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled ? _scoreFeedback.DisplayedRecordScore : recordScore;
+        public bool HasPendingScoreFeedback => _scoreFeedback != null && _scoreFeedback.isActiveAndEnabled && _scoreFeedback.HasPendingFeedback;
+
+        public void BindScoreFeedback(ScoreFeedbackController feedback, Camera camera)
+        {
+            if (_scoreFeedback != null) _scoreFeedback.onDisplayedScoreChanged -= UpdateScoreUI;
+            _scoreFeedback = feedback;
+            if (camera != null) _gameplayCamera = camera;
+            if (_scoreFeedback != null)
+            {
+                _scoreFeedback.Bind(this, _gameplayCamera);
+                _scoreFeedback.onDisplayedScoreChanged += UpdateScoreUI;
+            }
+            UpdateScoreUI();
+        }
 
         [Header("State & Tracking")]
         public int score;
@@ -92,6 +111,7 @@ namespace Gameplay
                 Debug.LogError("Found more than one GameController in the scene.");
             }
             instance = this;
+            if (_scoreFeedback != null) BindScoreFeedback(_scoreFeedback, _gameplayCamera);
         }
 
         private void Start()
@@ -497,34 +517,18 @@ namespace Gameplay
 
             TowerController towerCtrl = incomingTower.GetComponent<TowerController>();
 
-            // If merging into an existing tower at the top of the column
-            if (isTopOfColumn)
-            {
-                int topRow = grid.TopPlayableRow(column);
-                GameObject topOfColumn = grid.grid[column, topRow];
-                grid.grid[column, topRow] = null;
-                Destroy(topOfColumn);
+            TowerController topMatch = isTopOfColumn
+                ? grid.grid[column, grid.TopPlayableRow(column)].GetComponent<TowerController>() : null;
 
-                towerCtrl.level++;
-                IncrementScore(towerCtrl.level);
-                grid.DamageAdjacentBreakables(column, topRow);
-                grid.ResolveGravity(column);
-            }
+            if (levelDefinition != null) IncrementLevel(towerCtrl.level);
 
-            if (levelDefinition != null || isTopOfColumn)
-            {
-                IncrementLevel(towerCtrl.level);
-            }
-
-            // Place tower in the grid's top entry row
+            // Keep temporary logical entry occupancy; presentation enters from the near board edge.
             int entryRow = grid.totalRows - 1;
             grid.grid[column, entryRow] = incomingTower;
-
             towerCtrl.col = column;
             towerCtrl.row = entryRow;
             towerCtrl.state = TowerController.TowerState.grid;
-            incomingTower.transform.position = grid.WorldPosition(column, entryRow);
-            towerCtrl.drop = true;
+            towerCtrl.BeginPlacement(topMatch);
 
             // Replenish queue
             AddTowerToQueue(GetNextQueueLevel());
@@ -642,7 +646,6 @@ namespace Gameplay
             towerCtrl.state = TowerController.TowerState.queue;
             towerCtrl.queue = queue;
             towerCtrl.grid = grid;
-            towerCtrl.onTowerLevelUpEvent += IncrementScore;
             towerCtrl.onTowerLevelUpEvent += IncrementLevel;
             towerCtrl.level = towerLevel;
 
@@ -690,15 +693,20 @@ namespace Gameplay
         /// <summary>
         /// Increases score based on merged tower level and updates records and UI.
         /// </summary>
+        public void AwardMergeScore(int towerLevel, Vector3 worldPosition)
+        {
+            if (_scoreFeedback != null) _scoreFeedback.CaptureRecordBaseline();
+            int points = towerLevel * 10;
+            score += points;
+            if (score > recordScore) recordScore = score;
+            if (_scoreFeedback != null) _scoreFeedback.Enqueue(points, worldPosition);
+            UpdateScoreUI();
+        }
+
         public void IncrementScore(int towerLevel)
         {
             score += towerLevel * 10;
-
-            if (score > recordScore)
-            {
-                recordScore = score;
-            }
-
+            if (score > recordScore) recordScore = score;
             UpdateScoreUI();
         }
 
@@ -792,6 +800,7 @@ namespace Gameplay
 
         private void HandleLevelUpCheck()
         {
+            if (HasPendingScoreFeedback) return;
             if (prepLevelUpPanel)
             {
                 prepLevelUpPanel = false;
@@ -849,8 +858,8 @@ namespace Gameplay
 
         private void UpdateScoreUI()
         {
-            if (scoreText != null) scoreText.text = score.ToString();
-            if (recordScoreText != null) recordScoreText.text = recordScore.ToString();
+            if (scoreText != null) scoreText.text = DisplayedScore.ToString();
+            if (recordScoreText != null) recordScoreText.text = DisplayedRecordScore.ToString();
         }
 
         private void RecordBoosterUse()

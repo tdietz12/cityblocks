@@ -20,6 +20,8 @@ namespace UI
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text recordScoreText;
         [SerializeField] private TMP_Text movesLabel;
+        [SerializeField] private ScoreFeedbackController _scoreFeedback;
+        private int _deferredResult;
 
         [Header("Level Objectives")]
         [SerializeField] private ObjectiveCardUI scoreObjectivesCard;
@@ -107,10 +109,33 @@ namespace UI
             }
         }
 
+        private void BindScorePresentation()
+        {
+            _deferredResult = 0;
+            if (game == null || _scoreFeedback == null) return;
+            _scoreFeedback.onDisplayedScoreChanged -= Refresh;
+            game.BindScoreFeedback(_scoreFeedback, game.GameplayCamera);
+            _scoreFeedback.onDisplayedScoreChanged += Refresh;
+        }
+
+        private void OnEnable() { if (game != null) BindScorePresentation(); }
+        private void OnDisable()
+        {
+            _deferredResult = 0;
+            if (_scoreFeedback != null) _scoreFeedback.onDisplayedScoreChanged -= Refresh;
+        }
+
         private void Update()
         {
             // Continuously update button interactability and remaining booster count labels
             RefreshPowerUps();
+            if (_deferredResult != 0 && game != null && !game.HasPendingScoreFeedback)
+            {
+                int result = _deferredResult;
+                _deferredResult = 0;
+                if (result == 1 && game.state == GameController.GameState.win) ShowWin();
+                else if (result == 2 && game.state == GameController.GameState.lose) ShowLoss();
+            }
         }
 
         /// <summary>
@@ -127,6 +152,8 @@ namespace UI
                 DataPersistenceController.instance.LoadGame();
             }
 
+            BindScorePresentation();
+            if (_scoreFeedback != null) _scoreFeedback.ClearAndSynchronize();
             HideAllOverlayPanels();
 
             if (movesLabel != null) movesLabel.gameObject.SetActive(false);
@@ -157,6 +184,8 @@ namespace UI
         {
             session = levelSession;
             game = gameController;
+            BindScorePresentation();
+            if (_scoreFeedback != null) _scoreFeedback.ClearAndSynchronize();
             BindObjectiveCards(session != null ? session.Definition : null);
 
             RegisterListeners();
@@ -370,10 +399,10 @@ namespace UI
             EnsureGameControllerReference();
             if (game == null) return;
 
-            if (scoreText != null) scoreText.text = game.score.ToString();
-            if (recordScoreText != null) recordScoreText.text = game.recordScore.ToString();
-            if (scoreObjectivesCard != null) scoreObjectivesCard.Refresh(game.level, game.score);
-            if (startObjectivesCard != null) startObjectivesCard.Refresh(game.level, game.score);
+            if (scoreText != null) scoreText.text = game.DisplayedScore.ToString();
+            if (recordScoreText != null) recordScoreText.text = game.DisplayedRecordScore.ToString();
+            if (scoreObjectivesCard != null) scoreObjectivesCard.Refresh(game.level, game.DisplayedScore);
+            if (startObjectivesCard != null) startObjectivesCard.Refresh(game.level, game.DisplayedScore);
 
             if (session != null && movesLabel != null)
             {
@@ -423,6 +452,12 @@ namespace UI
         /// </summary>
         public void ShowWin()
         {
+            if (game != null && game.HasPendingScoreFeedback)
+            {
+                SetPanelActive(playPanel, false);
+                _deferredResult = 1;
+                return;
+            }
             SetPanelActive(winPanel, true);
             SetPanelActive(playPanel, false);
 
@@ -439,6 +474,12 @@ namespace UI
         /// </summary>
         public void ShowLoss()
         {
+            if (game != null && game.HasPendingScoreFeedback)
+            {
+                SetPanelActive(playPanel, false);
+                _deferredResult = 2;
+                return;
+            }
             SetPanelActive(playPanel, false);
             SetPanelActive(endlessLossPanel, false);
             SetPanelActive(lossPanel, true);
