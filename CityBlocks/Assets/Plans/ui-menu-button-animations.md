@@ -39,7 +39,21 @@ Adding a **Unified UI Motion & Micro-Interaction System** across all menus, HUD 
 - **`LevelUpPanel` (Endless Milestone Card)**: Card pops in with elastic scale; `"LEVEL UP!"` title punches from `1.25x -> 1.0x`; `ContinueButton` pops up `0.06s` later.
 - **`LevelWinPanel` (Campaign Victory Card)**: Card elastic pop-in, `"YOU WIN!"` title bounce, and staggered `"MAIN MENU"` / `"NEXT LEVEL"` buttons.
 - **`LevelLossPanel` / `LosePanel` (Defeat Card)**: Card entrance with a subtle horizontal shake (`±8px` damped sine over `0.22s`) on `"LEVEL FAILED"` / `"GAME OVER"` to reinforce impact, followed by `"TRY AGAIN"`, `"MAIN MENU"`, and `"BUY EXTRA MOVES"`.
-- **`StoreOffersWindow` & `DailyLoginRewards`**: Smooth card pop-in and fade when opened from Main Menu or gameplay.
+- **`StoreOffersWindow` & `DailyLoginRewards`**:
+  - **Unified Visual Design (`StoreOffersWindow`)**:
+    - Matches `MainMenu` (`StartPanel`) and `LevelRulesUI` (`StartPanel`, `LevelWinPanel`, `LevelLossPanel`, `LevelUpPanel`):
+    - **CanvasScaler**: Configured to `ScaleWithScreenSize` (`referenceResolution = 393x852`, `matchWidthOrHeight = 0`) matching `MainMenu`'s `StartPanel` so card and button proportions match identically across all portrait mobile resolutions.
+    - **Backdrop (`StoreOfferPanel`)**: Fullscreen dimmed overlay `RGBA(0.030, 0.050, 0.080, 0.780)` with `CanvasGroup` and `UIPanelAnimator`.
+    - **Modal Card (`StoreOfferPanel/Card`)**: Centered `330x310` card using sliced `RoundedRect` (`Assets/UI/FigmaImport/RoundedRect.png`) in deep slate-navy `RGBA(0.059, 0.082, 0.110, 0.950)` (`#0F151C`).
+    - **Header (`StreakLabel` / Title)**: Bold `24pt` (`#F5F5F5`, `RGBA(0.961, 0.961, 0.961, 1.000)`) centered at the top of `Card` (`"STORE"`), with an optional store icon badge matching the Main Menu Store card.
+    - **Offer Details Container (`OfferBox` / `RewardSummary`)**: Inner rounded sub-panel (`RoundedRect`, `RGBA(0.118, 0.157, 0.204, 0.850)`) displaying clean, well-spaced offer text (`14pt`, `RGBA(0.941, 0.941, 0.941, 1.000)`).
+    - **Buttons Inside `Card`**:
+      - `ClaimButton` (`"DAILY SPECIAL"` / `"BUY DAILY SPECIAL"`): Primary gold button (`RoundedRect` sliced, `RGBA(0.831, 0.643, 0.141, 1.000)`, bold dark label `RGBA(0.059, 0.059, 0.059, 1.000)`).
+      - `ReminderButton` (`"REMOVE ADS"`): Secondary slate button (`RoundedRect` sliced, `RGBA(0.118, 0.157, 0.204, 1.000)`, bold gold/light label `RGBA(0.831, 0.643, 0.141, 1.000)`).
+      - `DailyRewardOpenButton` (`closeStoreButton`, `"CLOSE"`): Parented **inside `StoreOfferPanel/Card`** (instead of outside `StoreOfferPanel`), styled as a secondary slate button (`RoundedRect` sliced, `RGBA(0.118, 0.157, 0.204, 1.000)`, bold light label `RGBA(0.941, 0.941, 0.941, 1.000)`).
+  - **Unified Entrance & Exit Animation (`StoreOffersWindow`)**:
+    - Because `closeStoreButton` now lives inside `StoreOfferPanel/Card` and stays active as part of the card hierarchy, opening the Store via `UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, true)` animates the entire `Card` (`0.82x -> 1.04x -> 1.0x`), fades `CanvasGroup` (`0 -> 1`), and staggers all 3 buttons (`ClaimButton`, `ReminderButton`, `closeStoreButton`) in sequence.
+    - Closing the Store via `UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, false)` smoothly shrinks and fades the `Card` and all 3 buttons together over `0.16s` (`PlayExit()`) instead of snapping `closeStoreButton` off prematurely.
 
 ### 3. In-Game HUD & Counter Micro-Animations (`ScorePanel` & `PlayPanel`)
 - **Top HUD (`ScorePanel`) & Bottom Dock (`PlayPanel`) Entrance**: When transitioning from `StartPanel` into active gameplay (`StartGame()`), `PlayPanel` buttons pop in with a quick staggered wave (`0.03s` apart) and `ScorePanel` slides/fades cleanly.
@@ -92,51 +106,53 @@ Adding a **Unified UI Motion & Micro-Interaction System** across all menus, HUD 
 2. `Assets/Scripts/UI/ObjectiveCardUI.cs`:
    - Track previous progress per objective row; when `current` increases or reaches `objective.target`, trigger a brief scale pulse (`1.0 -> 1.25 -> 1.0` over `0.15s`) on the row's icon/label.
 
+3. `Assets/Scripts/UI/StoreOfferWindow.cs`:
+   - Keep `closeStoreButton` (`DailyRewardOpenButton`) active inside `StoreOfferPanel/Card` (instead of toggling it outside `StoreOfferPanel`) so it participates in `UIPanelAnimator`'s card pop-in, `CanvasGroup` alpha fade, staggered button entrance, and smooth exit animation (`PlayExit()`).
+   - Format the Store description cleanly with rich-text section headers (`<b>DAILY SPECIAL</b>`, `<b>REMOVE ADS</b>`) and readable booster summary lines.
+
 ### Prefabs & Scenes to Modify
 1. `Assets/Prefabs/UI/LevelRulesUI.prefab` & `Assets/Scenes/EndlessMode.unity`:
    - Attach and configure `UIPanelAnimator` on `StartPanel`, `LevelUpPanel`, `LevelWinPanel`, `LevelLossPanel`, `LosePanel`, `PlayPanel`, `PowerUpPanel_Delete`, `PowerUpPanel_LevelUp`, and `PowerUpPanel_LookAhead`.
-   - Attach and configure `UIButtonAnimator` on all interactive buttons (`PlayButton`, `BackButton`, `ContinueButton`, `PauseButton`, `DeletePowerUpButton`, `LookAheadPowerUpButton`, `LevelUpPowerUpButton`, `PrimaryButton`, `MenuButton`, `BuyExtraMovesButton`, `RetryButton`), enabling `_enableIdlePulse` on primary CTAs.
-2. `Assets/Scenes/MainMenu.unity`, `Assets/Prefabs/UI/LevelsMenuButton.prefab`, `Assets/Prefabs/UI/StoreOffersWindow.prefab`, `Assets/Prefabs/UI/DailyLoginRewards.prefab`:
-   - Attach `UIButtonAnimator` to Main Menu buttons (`LevelsMenuButton`, `EndlessButton`, `StoreButton`, `Settings`, Store & Daily Login buttons) and `UIPanelAnimator` to `StartPanel`, `StoreOffersWindow`, and `DailyLoginRewards` modal panels.
+   - Attach and configure `UIButtonAnimator` on all interactive buttons (`PlayButton`, `BackButton`, `ContinueButton`, `PauseButton`, `DeletePowerUpButton`, `LookAheadPowerUpButton`, `LevelUpPowerUpButton`, `PrimaryButton`, `MenuButton`, `BuyExtraMovesButton`, `RetryButton`).
+2. `Assets/Prefabs/UI/StoreOffersWindow.prefab` & `Assets/Scenes/MainMenu.unity`:
+   - Update `StoreOffersWindow` `CanvasScaler` to `ScaleWithScreenSize` (`393x852`, `match = 0`) matching `MainMenu`'s `StartPanel`.
+   - Style `StoreOfferPanel/Card` (`330x310`) with sliced `RoundedRect` (`Assets/UI/FigmaImport/RoundedRect.png`) and deep slate-navy `RGBA(0.059, 0.082, 0.110, 0.950)` matching `StartPanel`, `LevelWinPanel`, `LevelLossPanel`, and `LevelUpPanel`.
+   - Style `StreakLabel` (`"STORE"`) with bold `24pt` `#F5F5F5` typography and `RewardSummary` with clean `14pt` light typography inside the card.
+   - Reparent `DailyRewardOpenButton` (`closeStoreButton`, `"CLOSE"`) inside `StoreOfferPanel/Card`, style `ClaimButton` (`RoundedRect` gold `#D4A424` with bold dark text), `ReminderButton` (`RoundedRect` slate `#1E2834` with bold gold text), and `DailyRewardOpenButton` (`RoundedRect` slate `#1E2834` with bold light text), and include all 3 buttons in `UIPanelAnimator._staggeredButtons`.
 
-### Editor Tests to Create
+### Editor Tests to Create / Update
 1. `Assets/Editor/Tests/UIMotionConsistencyTests.cs`:
    - Automated Editor verification suite (`[MenuItem("Tools/City Blocks/Tests/UI Motion Consistency Checks")]`) verifying:
-     - All buttons in `LevelRulesUI` have `UIButtonAnimator` configured with consistent squash/overshoot parameters.
+     - All buttons in `LevelRulesUI` and `StoreOffersWindow` have `UIButtonAnimator` configured with consistent squash/overshoot parameters.
      - Pointer down squashes button scale (`< 1.0`), pointer up/click overshoots (`> 1.0`) and settles to `1.0`.
      - Disabled buttons (`button.interactable = false`) do not squash or idle-pulse.
-     - All modal panels (`StartPanel`, `LevelUpPanel`, `LevelWinPanel`, `LevelLossPanel`) have `UIPanelAnimator`, animate their card scale and `CanvasGroup` alpha on `OnEnable()`, and settle cleanly at `scale == Vector3.one` and `alpha == 1f`.
+     - All modal panels (`StartPanel`, `LevelUpPanel`, `LevelWinPanel`, `LevelLossPanel`, and `StoreOfferPanel` in `StoreOffersWindow`) have `UIPanelAnimator`, use the unified `RoundedRect` card styling, animate their card scale and `CanvasGroup` alpha on `PlayEntrance()` and `PlayExit()`, and keep `closeStoreButton` inside `StoreOfferPanel/Card` so it animates smoothly on both open and close.
      - `movesLabel` and `ObjectiveCardUI` rows pulse when values change.
      - Existing test suites (`Combo Celebration Checks`, `Merge Multiplier Checks`, `Score Collection Deterministic Checks`) pass with zero regressions.
 
 # Implementation Steps
 
-### Step 1: Create `UIButtonAnimator` and `UIPanelAnimator` Core Components
-- **Files**: `Assets/Scripts/UI/UIButtonAnimator.cs`, `Assets/Scripts/UI/UIPanelAnimator.cs`
+### Step 1: Update `StoreOfferWindow.cs` for Unified Card & Close Button Lifecycle
+- **Files**: `Assets/Scripts/UI/StoreOfferWindow.cs`
 - **Details**:
-  - Implement `UIButtonAnimator` with pointer press squash (`0.92x`), release elastic bounce (`1.08x -> 1.0x`), optional primary CTA breathing pulse (`1.035x`), optional arrow icon nudge, and deterministic `Advance(float delta)`.
-  - Implement `UIPanelAnimator` with modal card elastic pop-in (`0.82x -> 1.04x -> 1.0x`), `CanvasGroup` fade-in, optional defeat card shake, staggered child button scale-in, and deterministic `Advance(float delta)`.
+  - Stop hiding/showing `closeStoreButton` independently outside `StoreOfferPanel`; instead, keep `closeStoreButton` active inside `StoreOfferPanel/Card` so `UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, true/false)` animates the entire card and all 3 buttons (including `"CLOSE"`) together on both open and close.
+  - Format the Store offer summary text cleanly for the unified card layout.
 - **Dependencies**: None
 
-### Step 2: Add HUD Counter & Objective Progress Micro-Pulses in `LevelRulesUI` and `ObjectiveCardUI`
-- **Files**: `Assets/Scripts/UI/LevelRulesUI.cs`, `Assets/Scripts/UI/ObjectiveCardUI.cs`
+### Step 2: Restyle & Re-layout `StoreOffersWindow.prefab` and `MainMenu.unity` to Match Game Menus
+- **Files**: `Assets/Prefabs/UI/StoreOffersWindow.prefab`, `Assets/Scenes/MainMenu.unity`
 - **Details**:
-  - Add reusable label/rect pulse helper to pulse `movesLabel` (with low-moves urgency tint when `<= 3`) and power-up count labels when their values change.
-  - Pulse `ObjectiveCardUI` rows when tower level or score progress advances or completes an objective.
+  - Configure `CanvasScaler` on `StoreOffersWindow` to `ScaleWithScreenSize` (`393x852`, `matchWidthOrHeight = 0`) matching `MainMenu`'s `StartPanel`.
+  - Apply sliced `RoundedRect` (`Assets/UI/FigmaImport/RoundedRect.png`) and dark slate `RGBA(0.059, 0.082, 0.110, 0.950)` to `StoreOfferPanel/Card` (`330x310`).
+  - Reparent `DailyRewardOpenButton` (`closeStoreButton`) under `StoreOfferPanel/Card`, apply `RoundedRect` gold (`RGBA(0.831, 0.643, 0.141, 1.000)`) and slate (`RGBA(0.118, 0.157, 0.204, 1.000)`) button styling with bold typography, and wire all 3 buttons into `UIPanelAnimator._staggeredButtons`.
 - **Dependencies**: Step 1
 
-### Step 3: Wire `UIButtonAnimator` and `UIPanelAnimator` Across Prefabs and Scenes
-- **Files**: `Assets/Prefabs/UI/LevelRulesUI.prefab`, `Assets/Prefabs/UI/LevelsMenuButton.prefab`, `Assets/Prefabs/UI/StoreOffersWindow.prefab`, `Assets/Prefabs/UI/DailyLoginRewards.prefab`, `Assets/Scenes/EndlessMode.unity`, `Assets/Scenes/MainMenu.unity`
-- **Details**:
-  - Attach `UIPanelAnimator` and `UIButtonAnimator` with consistent timing settings across all game screens and prefabs.
-- **Dependencies**: Step 1, Step 2
-
-### Step 4: Create & Run Automated Verification Suite (`UIMotionConsistencyTests.cs`)
+### Step 3: Update & Run Automated Verification Suite (`UIMotionConsistencyTests.cs`)
 - **Files**: `Assets/Editor/Tests/UIMotionConsistencyTests.cs`
 - **Details**:
-  - Verify button press/release/idle animations, modal entrance choreography, HUD counter pulses, and run all existing test suites to confirm zero regressions.
-- **Dependencies**: Step 1, Step 2, Step 3
+  - Add verification checks confirming `StoreOffersWindow` uses `ScaleWithScreenSize`, sliced `RoundedRect` card & button styling matching the other menus, `closeStoreButton` parented inside `StoreOfferPanel/Card`, staggered button entrance, and smooth `PlayEntrance()` / `PlayExit()` animations via `StoreOfferWindow.OpenDailySpecial()` and `CloseDailySpecial()`.
+- **Dependencies**: Step 1, Step 2
 
 # Verification & Testing
-- Run `Tools/City Blocks/Tests/UI Motion Consistency Checks` to verify deterministic button squash/bounce, CTA idle pulse, modal card entrance animations on `StartPanel`, `LevelUpPanel`, `LevelWinPanel`, and `LevelLossPanel`, and HUD counter pulses.
-- Run `Tools/City Blocks/Tests/Combo Celebration Checks`, `Tools/City Blocks/Tests/Merge Multiplier Checks`, and `Tools/City Blocks/Tests/Score Collection Deterministic Checks` to verify full compatibility.
+- Run `Tools/City Blocks/Tests/UI Motion Consistency Checks` to verify deterministic button squash/bounce, modal card entrance & exit animations on `StartPanel`, `LevelUpPanel`, `LevelWinPanel`, `LevelLossPanel`, and `StoreOffersWindow` (`StoreOfferPanel`), unified `RoundedRect` visual styling, and HUD counter pulses.
+- Run `Tools/City Blocks/Tests/Combo Celebration Checks` and `Tools/City Blocks/Tests/Merge Multiplier Checks` to verify full compatibility.

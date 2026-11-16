@@ -160,13 +160,75 @@ namespace CityBlocks.EditorTests
                 Check(row1.localScale == Vector3.one, "Objective row pulse must return to 1.0x");
                 UnityEngine.Object.DestroyImmediate(dummyDef);
 
-                // 5. Verify StoreOffersWindow and DailyLoginRewards prefabs have UIButtonAnimator & UIPanelAnimator
+                // 5. Verify StoreOffersWindow visual styling, layout, and open/close animations match other game menus
                 var storePrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/StoreOffersWindow.prefab");
                 var dailyPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/DailyLoginRewards.prefab");
                 var levelsBtnPrefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/UI/LevelsMenuButton.prefab");
                 Check(storePrefab.GetComponentsInChildren<UIButtonAnimator>(true).Length >= 3 &&
                       storePrefab.GetComponentsInChildren<UIPanelAnimator>(true).Length >= 1,
                     "StoreOffersWindow.prefab must have UIButtonAnimator and UIPanelAnimator");
+
+                var storeInstance = UnityEngine.Object.Instantiate(storePrefab);
+                try
+                {
+                    var storeScaler = storeInstance.GetComponent<CanvasScaler>();
+                    Check(storeScaler != null && storeScaler.uiScaleMode == CanvasScaler.ScaleMode.ScaleWithScreenSize &&
+                          Mathf.Abs(storeScaler.referenceResolution.x - 393f) < 0.1f,
+                        "StoreOffersWindow must use ScaleWithScreenSize (393x852) matching MainMenu StartPanel");
+
+                    Transform storePanelTf = storeInstance.transform.Find("StoreOfferPanel");
+                    Transform storeCardTf = storePanelTf != null ? storePanelTf.Find("Card") : null;
+                    Check(storeCardTf != null, "StoreOfferPanel/Card must exist");
+
+                    var cardImg = storeCardTf.GetComponent<Image>();
+                    Check(cardImg != null && cardImg.sprite != null && cardImg.sprite.name == "RoundedRect" && cardImg.type == Image.Type.Sliced,
+                        "StoreOfferPanel/Card must use sliced RoundedRect sprite matching other menus");
+                    Check(Mathf.Abs(cardImg.color.r - 0.059f) < 0.02f && Mathf.Abs(cardImg.color.g - 0.082f) < 0.02f,
+                        "StoreOfferPanel/Card must use dark slate card color matching other menus");
+
+                    // All 3 store buttons (ClaimButton, ReminderButton, DailyRewardOpenButton) must be inside Card and use RoundedRect
+                    Transform claimBtnTf = storeCardTf.Find("ClaimButton");
+                    Transform reminderBtnTf = storeCardTf.Find("ReminderButton");
+                    Transform closeBtnTf = storeCardTf.Find("DailyRewardOpenButton");
+                    Check(claimBtnTf != null && reminderBtnTf != null && closeBtnTf != null,
+                        "ClaimButton, ReminderButton, and DailyRewardOpenButton (Close) must all be parented inside StoreOfferPanel/Card");
+
+                    foreach (Transform btnTf in new[] { claimBtnTf, reminderBtnTf, closeBtnTf })
+                    {
+                        var img = btnTf.GetComponent<Image>();
+                        Check(img != null && img.sprite != null && img.sprite.name == "RoundedRect" && img.type == Image.Type.Sliced,
+                            "Store button '" + btnTf.name + "' must use sliced RoundedRect sprite");
+                    }
+
+                    // Verify StoreOfferPanel entrance and exit animations animate the Card and all 3 buttons
+                    var storePanelAnim = storePanelTf.GetComponent<UIPanelAnimator>();
+                    storePanelTf.gameObject.SetActive(true);
+                    storePanelAnim.PlayEntrance();
+                    Check(storePanelAnim.IsAnimating && !storePanelAnim.IsClosing && storeCardTf.localScale.x < 0.9f,
+                        "StoreOfferPanel must start entrance animation from reduced scale");
+                    storePanelAnim.Advance(0.14f);
+                    Check(storeCardTf.localScale.x > 1.0f && storePanelAnim.PanelCanvasGroup.alpha > 0.7f,
+                        "StoreOfferPanel must overshoot scale and fade in during entrance");
+                    storePanelAnim.Advance(0.5f);
+                    Check(!storePanelAnim.IsAnimating && Mathf.Abs(storeCardTf.localScale.x - 1f) < 0.03f &&
+                          Mathf.Abs(closeBtnTf.localScale.x - 1f) < 0.03f,
+                        "StoreOfferPanel and its Close button must settle cleanly at scale 1.0");
+
+                    storePanelAnim.PlayExit();
+                    Check(storePanelAnim.IsAnimating && storePanelAnim.IsClosing && closeBtnTf.gameObject.activeSelf,
+                        "Close button must stay active inside Card while StoreOfferPanel plays exit animation");
+                    storePanelAnim.Advance(storePanelAnim.ExitDuration * 0.5f);
+                    Check(storePanelTf.gameObject.activeSelf && storeCardTf.localScale.x < 0.98f,
+                        "StoreOfferPanel Card must shrink during exit animation");
+                    storePanelAnim.Advance(storePanelAnim.ExitDuration);
+                    Check(!storePanelTf.gameObject.activeSelf && !storePanelAnim.IsAnimating,
+                        "StoreOfferPanel must deactivate after exit animation completes");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(storeInstance);
+                }
+
                 Check(dailyPrefab.GetComponentsInChildren<UIButtonAnimator>(true).Length >= 3 &&
                       dailyPrefab.GetComponentsInChildren<UIPanelAnimator>(true).Length >= 1,
                     "DailyLoginRewards.prefab must have UIButtonAnimator and UIPanelAnimator");

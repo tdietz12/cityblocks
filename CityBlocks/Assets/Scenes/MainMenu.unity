@@ -4173,6 +4173,16 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 1641007269935553225, guid: 27419501edb64cc781604d5f3b7b2a90,
+        type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3999012984716031609, guid: 27419501edb64cc781604d5f3b7b2a90,
+        type: 3}
+      propertyPath: m_PixelsPerUnitMultiplier
+      value: 2
+      objectReference: {fileID: 0}
     - target: {fileID: 8566587590973405823, guid: 27419501edb64cc781604d5f3b7b2a90,
         type: 3}
       propertyPath: m_LocalScale.x

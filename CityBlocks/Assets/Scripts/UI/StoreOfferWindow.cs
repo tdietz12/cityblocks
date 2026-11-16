@@ -23,15 +23,17 @@ namespace UI
         {
             if (dailySpecialPurchaseButton != null) dailySpecialPurchaseButton.onClick.AddListener(BuyDailySpecial);
             if (noAdsPurchaseButton != null) noAdsPurchaseButton.onClick.AddListener(BuyNoAds);
-            if (closeStoreButton != null) closeStoreButton.onClick.AddListener(CloseDailySpecial);
-            if (dailySpecialWindow != null) dailySpecialWindow.SetActive(false);
-            if (noAdsWindow != null) noAdsWindow.SetActive(false);
             if (closeStoreButton != null)
             {
-                closeStoreButton.gameObject.SetActive(false);
+                closeStoreButton.onClick.AddListener(CloseDailySpecial);
                 TMP_Text closeLabel = closeStoreButton.GetComponentInChildren<TMP_Text>();
                 if (closeLabel != null) closeLabel.text = "CLOSE";
+                bool insidePanel = (dailySpecialWindow != null && closeStoreButton.transform.IsChildOf(dailySpecialWindow.transform)) ||
+                                   (noAdsWindow != null && closeStoreButton.transform.IsChildOf(noAdsWindow.transform));
+                closeStoreButton.gameObject.SetActive(insidePanel);
             }
+            if (dailySpecialWindow != null) dailySpecialWindow.SetActive(false);
+            if (noAdsWindow != null) noAdsWindow.SetActive(false);
         }
 
         public void OpenDailySpecial()
@@ -55,8 +57,8 @@ namespace UI
                 return;
             }
             if (noAdsTitle != null) noAdsTitle.text = noAdsOffer.displayName;
-            UIPanelAnimator.SetAnimatedActive(noAdsWindow, true);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(true);
+            UIPanelAnimator.SetAnimatedActive(noAdsWindow, true);
         }
 
         private void ShowCombinedOfferPanel()
@@ -65,12 +67,13 @@ namespace UI
             if (dailySpecialDescription != null)
             {
                 string special = dailySpecial != null
-                    ? dailySpecial.displayName + "\n" + dailySpecial.description +
-                      "\nUses included: " + FormatUses(dailySpecial.includedUses) +
+                    ? "<color=#D4A424><b>" + dailySpecial.displayName.ToUpperInvariant() + "</b></color>\n" +
+                      dailySpecial.description +
+                      "\n<color=#B8C4D0>Includes: " + FormatUses(dailySpecial.includedUses) + "</color>" +
                       (dailySpecial.priceInPowerUpUses > 0 ? "\nPrice: " + dailySpecial.priceInPowerUpUses + " power-up uses" : string.Empty)
                     : string.Empty;
                 string noAds = noAdsOffer != null && noAdsOffer.noAdsOffer
-                    ? "\n\n" + noAdsOffer.displayName + "\n" + noAdsOffer.description
+                    ? "\n\n<color=#D4A424><b>" + noAdsOffer.displayName.ToUpperInvariant() + "</b></color>\n" + noAdsOffer.description
                     : string.Empty;
                 dailySpecialDescription.text = special + noAds;
             }
@@ -78,8 +81,8 @@ namespace UI
                 dailySpecialPurchaseButton.interactable = dailySpecial != null && !string.IsNullOrWhiteSpace(dailySpecial.productId);
             if (noAdsPurchaseButton != null)
                 noAdsPurchaseButton.interactable = noAdsOffer != null && !string.IsNullOrWhiteSpace(noAdsOffer.productId) && !PowerUpStore.AdsRemoved;
-            UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, true);
             if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(true);
+            UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, true);
         }
 
         public void ToggleStore()
@@ -94,16 +97,22 @@ namespace UI
 
         public void CloseDailySpecial()
         {
+            bool closeInsidePanel = closeStoreButton != null &&
+                                    ((dailySpecialWindow != null && closeStoreButton.transform.IsChildOf(dailySpecialWindow.transform)) ||
+                                     (noAdsWindow != null && closeStoreButton.transform.IsChildOf(noAdsWindow.transform)));
             UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, false);
             if (noAdsWindow != null && noAdsWindow != dailySpecialWindow) UIPanelAnimator.SetAnimatedActive(noAdsWindow, false);
-            if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(false);
+            if (closeStoreButton != null && !closeInsidePanel) closeStoreButton.gameObject.SetActive(false);
         }
 
         public void CloseNoAdsOffer()
         {
+            bool closeInsidePanel = closeStoreButton != null &&
+                                    ((dailySpecialWindow != null && closeStoreButton.transform.IsChildOf(dailySpecialWindow.transform)) ||
+                                     (noAdsWindow != null && closeStoreButton.transform.IsChildOf(noAdsWindow.transform)));
             UIPanelAnimator.SetAnimatedActive(noAdsWindow, false);
             if (dailySpecialWindow != null && dailySpecialWindow != noAdsWindow) UIPanelAnimator.SetAnimatedActive(dailySpecialWindow, false);
-            if (closeStoreButton != null) closeStoreButton.gameObject.SetActive(false);
+            if (closeStoreButton != null && !closeInsidePanel) closeStoreButton.gameObject.SetActive(false);
         }
 
         private void BuyDailySpecial()
