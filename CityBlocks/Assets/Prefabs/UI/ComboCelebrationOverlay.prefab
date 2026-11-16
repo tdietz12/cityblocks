@@ -183,7 +183,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3801993728556856863}
   m_Layer: 0
-  m_Name: ConfettiContainer
+  m_Name: SeismicVfxContainer
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -315,7 +315,10 @@ MonoBehaviour:
   _backdropImage: {fileID: 1502509782087265815}
   _bannerRoot: {fileID: 8890246600038794579}
   _headlineLabel: {fileID: 4596234012429410027}
-  _confettiContainer: {fileID: 3801993728556856863}
+  _vfxContainer: {fileID: 3801993728556856863}
+  _levelUpRingTexture: {fileID: 2800000, guid: 559fdffa3e96002409a6a2fb135dfabb, type: 3}
+  _levelUpEffectPrefab: {fileID: 6528022482712934154, guid: ddcb5961848def845ba3b2927a13c8a1,
+    type: 3}
   _startDelay: 0.2
   _totalDuration: 2.25
   _fadeInDuration: 0.18
@@ -324,4 +327,4 @@ MonoBehaviour:
   _backdropPeakAlpha: 0.58
   _headlineOvershootScale: 1.08
   _screenHorizontalPadding: 16
-  _confettiBurstCount: 32
+  _ringBurstCount: 28

@@ -84,7 +84,8 @@ namespace CityBlocks.EditorTests
                 Check((bool)Property(celebration, "IsInStartDelay"), "Celebration must begin in the 0.2s start delay");
                 Check((bool)Property(game, "HasPendingComboCelebration") && (bool)Property(game, "HasPendingScoreFeedback"), "GameController must report pending combo celebration during start delay");
                 Check(group.blocksRaycasts && group.alpha == 0f && bannerRoot.localScale.x == 0f, "During 0.2s start delay, input is blocked while visuals wait to appear");
-                Check((int)Property(celebration, "ActiveConfettiCount") == 0, "Confetti burst must wait for the 0.2s start delay to finish");
+                Check((int)Property(celebration, "ActiveShockwaveCount") == 0 && (int)Property(celebration, "ActiveRubbleCount") == 0,
+                    "Seismic shockwaves and rubble burst must wait for the 0.2s start delay to finish");
 
                 // Advance halfway through the 0.2s delay (0.1s) - still delayed
                 Call(feedback, "Advance", 0.1f);
@@ -95,12 +96,38 @@ namespace CityBlocks.EditorTests
                 Check(!(bool)Property(celebration, "IsInStartDelay") && (bool)Property(celebration, "IsCelebrating"), "Celebration must exit start delay after 0.2s");
                 Check((int)Property(celebration, "LastCelebratedMergeCount") == 3, "LastCelebratedMergeCount must be 3");
                 Check((string)Property(celebration, "CurrentHeadline") == "AWESOME!", "3-merge tier headline should start with AWESOME!");
-                Check((int)Property(celebration, "ActiveConfettiCount") >= 16, "Confetti VFX burst must spawn active particles once start delay completes");
+                Check((int)Property(celebration, "ActiveShockwaveCount") >= 2, "Seismic shockwave rings must spawn once start delay completes");
+                Check((int)Property(celebration, "ActiveRubbleCount") >= 16, "Heavy rubble shards must spawn once start delay completes");
 
-                // 4. Advance animation to mid-pop and verify banner animation
+                var vfxContainer = (RectTransform)Get(celebration, "_vfxContainer");
+                var ringTexture = (Texture2D)Get(celebration, "_levelUpRingTexture");
+                var levelUpPrefab = (GameObject)Get(celebration, "_levelUpEffectPrefab");
+                Check(vfxContainer != null, "_vfxContainer must be wired on ComboCelebrationController");
+                Check(ringTexture != null && ringTexture.name == "Square", "_levelUpRingTexture must reference Assets/Prefabs/Cell/Square.png");
+                Check(levelUpPrefab != null && levelUpPrefab.name == "LevelUpEffect", "_levelUpEffectPrefab must reference Assets/Prefabs/LevelUpEffect/LevelUpEffect.prefab");
+                for (int i = 0; i < vfxContainer.childCount; i++)
+                {
+                    Check(!vfxContainer.GetChild(i).name.StartsWith("Confetti_"), "Legacy Confetti_ objects must not exist in SeismicVfxContainer");
+                }
+                var firstRing = (RectTransform)vfxContainer.Find("ShockwaveRing_0");
+                var firstRubble = (RectTransform)vfxContainer.Find("RubbleShard_0");
+                Check(firstRing != null && firstRubble != null, "ShockwaveRing_0 and RubbleShard_0 must be created in SeismicVfxContainer");
+                Check(firstRing.GetComponent<UnityEngine.UI.Image>().sprite.texture == ringTexture &&
+                      firstRubble.GetComponent<UnityEngine.UI.Image>().sprite.texture == ringTexture,
+                      "Celebration rings must use the building LevelUpEffect Square.png ring texture");
+                float ringWidthEarly = firstRing.sizeDelta.x;
+                float risingRingYEarly = firstRubble.anchoredPosition.y;
+
+                // 4. Advance animation to mid-pop and verify banner, square ring expansion, and upward rising motion
                 Call(feedback, "Advance", 0.25f);
                 Check((bool)Property(celebration, "IsCelebrating"), "Celebration should be active at 0.3s into celebration");
                 Check(bannerRoot.localScale.x > 0.7f, "Headline banner must animate in");
+                Check(firstRing.sizeDelta.x > ringWidthEarly + 200f && Mathf.Abs(firstRing.sizeDelta.x - firstRing.sizeDelta.y) < 0.01f,
+                    "Expanding square ring must expand rapidly outward with 1:1 square proportions");
+                Check(firstRubble.anchoredPosition.y > risingRingYEarly + 40f,
+                    "Rising square rings must stream upward like the building LevelUpEffect");
+                Check(Mathf.Abs(firstRubble.localScale.x - firstRubble.localScale.y) < 0.001f && firstRubble.localScale.x > 0.5f,
+                    "Rising square ring must maintain uniform 1:1 square scale without paper-confetti Y-flip distortion");
 
                 // Verify celebration is still active at 1.6s into active celebration (since duration was extended to 2.25s)
                 Call(feedback, "Advance", 1.3f);
@@ -110,7 +137,8 @@ namespace CityBlocks.EditorTests
                 Call(feedback, "Advance", 0.8f);
                 Check(!(bool)Property(celebration, "IsCelebrating"), "Celebration must auto-dismiss after startDelay + totalDuration");
                 Check(!group.blocksRaycasts && group.alpha == 0f, "Dismissed celebration must restore input and hide overlay");
-                Check((int)Property(celebration, "ActiveConfettiCount") == 0, "Confetti particles must deactivate after celebration ends");
+                Check((int)Property(celebration, "ActiveShockwaveCount") == 0 && (int)Property(celebration, "ActiveRubbleCount") == 0,
+                    "Shockwaves and rubble shards must deactivate after celebration ends");
 
                 // 6. Verify 4 merges on a tower placement uses Tier 4 congratulatory word
                 Call(game, "BeginComboTurn", true);

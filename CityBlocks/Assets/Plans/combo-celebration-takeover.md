@@ -26,20 +26,14 @@ When a player places a tower from the queue and that single placement triggers *
 +---------------------------------------------------+
 | [Full-Screen Dimmed Backdrop (Alpha 0 -> 0.58)]   |
 |                                                   |
-|  ///////////////////////////////////////////////  |
-|  [Scrolling Yellow/Black Caution Ticker Tape Top] |
-|  ///////////////////////////////////////////////  |
+|          .  ((  ((===============))  ))  .        |
+|       <>     ((   +-----------+   ))       <>     |
+|     []     ((     | AWESOME!  |     ))       []   |
+|       <>     ((   +-----------+   ))       <>     |
+|          .  ((  ((===============))  ))  .        |
 |                                                   |
-|     *   +---------------------------+    .        |
-|         |        AWESOME!           |  *          |
-|         |  (Auto-Fit Screen Bounds, |             |
-|         |   Gold Gradient + Shadow) |             |
-|         +---------------------------+             |
-|                                                   |
-|  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\  |
-|  [Scrolling Yellow/Black Caution Ticker Tape Bot] |
-|  \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\  |
-|       [UI Confetti / Sparkle Burst VFX]           |
+|   [Concentric Seismic Shockwave Rings +           |
+|    Heavy Angular Concrete/Brick Rubble Shards]    |
 +---------------------------------------------------+
 ```
 
@@ -50,23 +44,34 @@ When a player places a tower from the queue and that single placement triggers *
    - Stretches across the entire screen (`AnchorMin (0,0)`, `AnchorMax (1,1)`).
    - Blocks raycasts while the celebration is active (`blocksRaycasts = true`), preventing unintended column taps or booster presses.
    - Smoothly fades backdrop alpha from `0 -> 0.58` over `0.18s`, holds through the extended `2.25s` celebration window, and fades out over `0.30s`.
-3. **Construction Caution Tape / Ticker Tape Aesthetic (Replaces Spinning Sunburst)**:
-   - Removes the spinning radial sunburst completely.
-   - Replaces it with top and bottom angled construction caution / ticker-tape ribbons (bold hazard yellow `#FFCC1A` bands with dark asphalt/black `#1A1712` borders and scrolling diagonal hazard stripes / construction ticker blocks) that slide and unfurl across the screen in opposite directions above and below the headline.
-4. **Congratulatory Headline Only (`TMP_Text`) — Tiered by Chain Length, Guaranteed Screen Fit**:
+3. **Congratulatory Headline Only (`TMP_Text`) — Tiered by Chain Length, Guaranteed Screen Fit**:
    - **Combo length text (`"xN COMBO!"`) is removed** — only the congratulatory word is shown.
    - **3 Merges**: `"AWESOME!"` / `"GREAT!"` / `"SUPER!"`
    - **4 Merges**: `"AMAZING!"` / `"SPECTACULAR!"` / `"FANTASTIC!"`
    - **5+ Merges**: `"UNBELIEVABLE!"` / `"LEGENDARY!"` / `"INCREDIBLE!"`
-   - Uses responsive auto-sizing and dynamic horizontal margin/scale clamping so even the longest words (`"UNBELIEVABLE!"`, `"SPECTACULAR!"`) combined with the elastic overshoot (`1.22x`) are strictly clamped within the screen width on all mobile aspect ratios (including narrow `9:19.5` and `9:16` portrait screens) with zero clipping or wrapping.
-5. **Screen-Space Celebration VFX (UI Confetti & Sparkle Burst)**:
-   - Procedural/UI particle burst of 28–36 colorful celebratory shards/sparkles (`RectTransform` + `Image` pool inside the overlay layer) that erupt outward from center with initial velocity, gravity, spin, and alpha fade, plus camera punch via `BoardCameraFeedback.PunchMerge()` when the delay completes.
+   - Uses responsive single-line sizing and dynamic scale clamping so even the longest words (`"UNBELIEVABLE!"`, `"SPECTACULAR!"`) span nearly edge-to-edge while remaining strictly within the screen width on all mobile aspect ratios with zero clipping or wrapping.
+   - Adds a short **seismic jackhammer tremor** (`0.22s` high-frequency vertical/horizontal impact thud on `_bannerRoot.anchoredPosition`) when the celebration erupts.
+4. **Seismic Shockwaves & Rubble VFX (Replaces Confetti Burst)**:
+   - **Concentric Seismic Impact Rings (`ShockwaveRing`)**:
+     - Spawns `2–3` staggered concentric shockwave rings (`2` rings for 3 merges, `3` rings for 4+ merges) behind the headline using a procedurally generated crisp ring `Sprite`.
+     - Rings expand rapidly from `~140px` to `1150px+` with cubic ease-out (`1 - (1 - t)^3`), tinted in Hazard Amber (`#FFCC1A`), Jackhammer Orange (`#FF7A1F`), and Seismic Concrete Dust (`#E6E0D6`), fading out as they ripple across the screen.
+   - **Heavy Angular Rubble Shards & Hazard Chips (`RubbleShard`)**:
+     - Replaces paper-like fluttering confetti with `24–40` chiseled polygonal concrete/stone rubble chunks, terracotta brick fragments, and hazard-beacon chips using a procedurally generated faceted rock/shard `Sprite`.
+     - Material palette: Concrete Gray (`#8C9196`), Dark Asphalt (`#383B40`), Limestone Mortar (`#C7C2B8`), Terracotta Brick (`#D96B27`), and Hazard Beacon Amber (`#FFBF1A`).
+     - Heavy ballistic physics: explosive radial blast velocity (`520–920 px/s`) with upward launch kick (`260–420 px/s`), heavy gravitational acceleration (`-1350 px/s²`), and rigid angular tumbling (no paper-flip `Cos` distortion) so every piece reads as solid construction rubble.
+   - **Camera Punch Synchronization**:
+     - Fires `BoardCameraFeedback.PunchMerge()` right as the first seismic shockwave ring and rubble blast erupt at the end of the `0.2s` start delay.
 
 # Key Asset & Context
 
-### New Scripts to Create
+### Scripts to Modify
 1. `Assets/Scripts/UI/ComboCelebrationController.cs`:
-   - Manages the fullscreen combo celebration lifecycle, `0.2s` start delay, `2.25s` celebration duration (extended by `0.8s`), tiered word selection (without combo count text), screen-bounds headline fitting, scrolling construction caution/ticker-tape ribbons, UI particle burst pool, and `IsCelebrating` state.
+   - Replace `ConfettiPalette`, `ConfettiPiece`, `SpawnConfettiBurst`, `UpdateConfetti`, and `EnsureConfettiPool` with the **Seismic Shockwaves & Rubble** system:
+     - `ShockwaveRing` struct and pool (`_shockwaves`) for expanding concentric jackhammer shockwave rings.
+     - `RubbleShard` struct and pool (`_rubble`) for heavy, rigid-tumbling faceted concrete/stone/brick shards.
+     - Cached procedural sprites (`GetOrCreateRingSprite()` and `GetOrCreateRubbleShardSprite()`) so rings and angular shards render crisply without external texture dependencies.
+     - Seismic tremor offset on `_bannerRoot.anchoredPosition` during the initial `0.22s` impact window.
+     - Expose `ActiveShockwaveCount` and `ActiveRubbleCount` (plus `ActiveVfxCount`) for deterministic test inspection while preserving `[FormerlySerializedAs("_confettiContainer")]` on `_vfxContainer` for prefab/scene compatibility.
    - Key API:
      ```csharp
      namespace UI
@@ -79,6 +84,9 @@ When a player places a tower from the queue and that single placement triggers *
              public float TotalDuration { get; }
              public string CurrentHeadline { get; }
              public int LastCelebratedMergeCount { get; }
+             public int ActiveShockwaveCount { get; }
+             public int ActiveRubbleCount { get; }
+             public int ActiveVfxCount { get; }
              public void Bind(GameController game);
              public void TriggerCelebration(int mergeCount);
              public void Advance(float delta);
@@ -88,87 +96,53 @@ When a player places a tower from the queue and that single placement triggers *
      }
      ```
 
-### Existing Scripts to Modify
-1. `Assets/Scripts/Gameplay/GameController.cs`:
-   - Track whether the current combo turn originated from a normal tower placement (`_isPlacementComboTurn`).
-   - In `PlayTower(...)`, start the placement combo turn (`BeginComboTurn(isTowerPlacement: true)`).
-   - In `ApplyDeletePowerUp(...)` and `ApplyLevelUpPowerUp(...)`, call `BeginComboTurn(isTowerPlacement: false)`.
-   - In `SaveLevelAfterMove()`:
-     - After `yield return new WaitUntil(grid.IsSettled);`, capture `int completedMerges = _turnMergeCount;` and `bool wasPlacementTurn = _isPlacementComboTurn;` before calling `EndComboTurn()`.
-     - If `wasPlacementTurn && completedMerges >= 3`, invoke `onComboCelebrationRequested?.Invoke(completedMerges)` (or trigger bound `ComboCelebrationController`) and wait while `HasPendingComboCelebration` is true before completing `moveResolving = false` and evaluating `HandleLevelUpCheck()` / `HandleLossCheck()` / `LevelSession.ResolveMove()`.
-     - Alternatively, expose `public bool HasPendingComboCelebration` and include it in `HasPendingScoreFeedback` / move resolution gating so win/loss/level-up panels wait until the celebration completes.
-2. `Assets/Scripts/UI/ScoreFeedbackController.cs` (or `LevelRulesUI.cs`):
-   - Reference and bind `ComboCelebrationController` alongside score feedback so `HasPendingFeedback` (or `GameController.HasPendingScoreFeedback`) remains true while `ComboCelebrationController.IsCelebrating` is active, and `ClearAndSynchronize()` resets any active celebration on retry/menu/load.
-3. `Assets/Scripts/Gameplay/BoardCameraFeedback.cs`:
-   - Trigger a celebratory camera pulse when the combo celebration erupts.
-
-### Prefabs & Scenes to Create / Modify
+### Prefabs & Scenes to Modify
 1. `Assets/Prefabs/UI/ComboCelebrationOverlay.prefab`:
-   - Prefab containing the `ComboCelebrationController`, fullscreen dimmed `Image`, `CanvasGroup`, top and bottom construction caution/ticker-tape banners (`TopCautionTape`, `BottomCautionTape` with hazard stripes), `CongratulatoryHeadline` (`TextMeshProUGUI` with screen-fit sizing and no combo length subtitle), and confetti/sparkle particle container.
+   - Rename `ConfettiContainer` to `SeismicVfxContainer` (wired to `_vfxContainer` on `ComboCelebrationController`) and tune default rubble burst count (`_rubbleBurstCount = 28`) and shockwave ring parameters.
 2. `Assets/Prefabs/UI/LevelRulesUI.prefab` & `Assets/Scenes/EndlessMode.unity`:
-   - Instantiate and wire `ComboCelebrationOverlay` under `LevelRulesUI` (above `PlayPanel` and `ScoreFeedbackLayer`, below pause/win/loss modals) and bind references on `ScoreFeedbackController` / `GameController`.
+   - Ensure prefab instances in `LevelRulesUI.prefab` and `EndlessMode.unity` stay synchronized with `ComboCelebrationOverlay.prefab`.
 
-### Editor Tests to Create / Update
+### Editor Tests to Modify
 1. `Assets/Editor/Tests/ComboCelebrationTests.cs`:
-   - Automated Editor test suite (`[MenuItem("Tools/City Blocks/Tests/Combo Celebration Checks")]`) verifying:
-     - 1 or 2 merges on a tower placement do **not** trigger celebration.
-     - 3, 4, and 5+ merges on a single tower placement trigger celebration only **after** `grid.IsSettled()`.
-     - The `0.2s` start delay holds visuals hidden while blocking premature turn transitions, then erupts into the `2.25s` celebration (extended by `0.8s`).
-     - Power-up merges (Delete / Level-Up) with 3+ merges do **not** trigger the tower-placement celebration.
-     - Tiered congratulatory words match the merge count, and no combo length text is shown.
-     - All congratulatory words (including `"UNBELIEVABLE!"` and `"SPECTACULAR!"`) fit strictly within screen bounds even at peak overshoot scale.
-     - Spinning sunburst is absent and replaced by construction caution/ticker-tape banners that animate horizontally.
-     - Fullscreen takeover blocks input during celebration and auto-dismisses after `_startDelay + _totalDuration`.
-     - Reset / Retry / ClearAndSynchronize immediately clears any active celebration state.
+   - Update `Tools/City Blocks/Tests/Combo Celebration Checks` to verify:
+     - During the `0.2s` start delay, `ActiveShockwaveCount == 0` and `ActiveRubbleCount == 0`.
+     - Once the `0.2s` start delay completes, concentric seismic shockwave rings (`ActiveShockwaveCount >= 2`) and heavy rubble shards (`ActiveRubbleCount >= 16`) spawn and animate outward/downward.
+     - Shockwave rings expand in size over time, and rubble shards follow heavy ballistic trajectories without paper-flip distortion.
+     - No legacy `Confetti_` GameObjects exist under the overlay.
+     - All shockwaves and rubble shards deactivate cleanly when the celebration ends or when `ClearAndSynchronize()` is called.
 
 # Implementation Steps
 
-### Step 1: Track Placement Merge Chains and Celebration Hook in `GameController`
-- **Files**: `Assets/Scripts/Gameplay/GameController.cs`
-- **Details**:
-  - Add `_isPlacementComboTurn` flag to distinguish `PlayTower` turns from power-up turns (`ApplyDeletePowerUp`, `ApplyLevelUpPowerUp`).
-  - Add `public event System.Action<int> onPlacementComboCompleted;` fired in `SaveLevelAfterMove()` once `grid.IsSettled()` is true and prior to `EndComboTurn()`, when `_isPlacementComboTurn && _turnMergeCount >= 3`.
-  - Wait for any active combo celebration to finish (via `HasPendingScoreFeedback` and `HasPendingComboCelebration`) before transitioning to `levelUp`, `win`, or `lose` panels.
-- **Dependencies**: None
-
-### Step 2: Update `ComboCelebrationController` with 0.2s Start Delay, +0.8s Extended Duration, Screen-Fit Headline Only, and Caution/Ticker Tape Aesthetic
+### Step 1: Replace Confetti with Seismic Shockwaves & Rubble in `ComboCelebrationController`
 - **Files**: `Assets/Scripts/UI/ComboCelebrationController.cs`
 - **Details**:
-  - Add `_startDelay = 0.2f` so the visual takeover waits `0.2s` after settlement before appearing, and extend `_totalDuration` by `0.8s` (from `1.45s` to `2.25s`).
-  - Remove the combo length subtitle (`"xN COMBO!"`) so only the congratulatory word is displayed.
-  - Ensure all congratulatory words fit strictly inside the screen width at peak scale by clamping banner width and dynamically scaling/fitting long headlines (`"UNBELIEVABLE!"`, `"SPECTACULAR!"`) to the overlay rect with safe horizontal padding.
-  - Remove the spinning sunburst effect and replace it with top and bottom angled construction caution / ticker-tape banners (`_topTapeBand`, `_bottomTapeBand`, `_topTapeStripeTrack`, `_bottomTapeStripeTrack`) that slide in and scroll hazard stripes across the banner.
-- **Dependencies**: Step 1
+  - Replace `ConfettiPalette` and `ConfettiPiece` with `RubblePalette`, `ShockwavePalette`, `ShockwaveRing`, and `RubbleShard`.
+  - Add procedural sprite generators (`GetOrCreateRingSprite()` for hollow concentric shockwave rings and `GetOrCreateRubbleShardSprite()` for faceted polygonal stone/concrete chunks).
+  - Implement `SpawnSeismicBurst(int mergeCount)` and `UpdateSeismicBurst(float time)`:
+    - Spawn `2` staggered shockwave rings for 3-merge combos and `3` rings for 4+ merge combos, expanding from `140px` to `1150px+` with ease-out scaling and alpha decay.
+    - Spawn `24–40` angular rubble shards with radial blast velocity, upward kick, heavy gravity (`-1350 px/s²`), and rigid angular rotation.
+    - Add a `0.22s` damped jackhammer impact tremor to `_bannerRoot.anchoredPosition` on burst start.
+  - Expose `ActiveShockwaveCount`, `ActiveRubbleCount`, and `ActiveVfxCount`.
+- **Dependencies**: None
 
-### Step 3: Wire `ComboCelebrationController` into `ScoreFeedbackController` and `LevelRulesUI`
-- **Files**: `Assets/Scripts/UI/ScoreFeedbackController.cs`, `Assets/Scripts/UI/LevelRulesUI.cs`
-- **Details**:
-  - Add `[SerializeField] private ComboCelebrationController _comboCelebration;` to `ScoreFeedbackController`.
-  - Include `(_comboCelebration != null && _comboCelebration.IsCelebrating)` in `ScoreFeedbackController.HasPendingFeedback`.
-  - Forward `Advance(delta)` and `ClearAndSynchronize()` to `_comboCelebration`.
-  - Subscribe to `_game.onPlacementComboCompleted` to trigger `_comboCelebration.TriggerCelebration(mergeCount)` once merging is settled.
-  - In `LevelRulesUI.RefreshPowerUps()`, ensure power-up buttons are non-interactable while celebration is active.
-- **Dependencies**: Step 1, Step 2
-
-### Step 4: Rebuild `ComboCelebrationOverlay.prefab` with Caution/Ticker Tape Aesthetic and Wire into `LevelRulesUI.prefab` and `EndlessMode.unity`
+### Step 2: Update `ComboCelebrationOverlay.prefab`, `LevelRulesUI.prefab`, and `EndlessMode.unity`
 - **Files**: `Assets/Prefabs/UI/ComboCelebrationOverlay.prefab`, `Assets/Prefabs/UI/LevelRulesUI.prefab`, `Assets/Scenes/EndlessMode.unity`
 - **Details**:
-  - Rebuild `ComboCelebrationOverlay.prefab` removing `SunburstRays` and `SubtitleBadge`, adding `TopCautionTape` and `BottomCautionTape` (hazard yellow bands with dark trim and repeating diagonal black hazard stripes), and configuring `HeadlineLabel` with single-line auto-sizing and screen-fit margins.
-  - Update the prefab instance in `LevelRulesUI.prefab` and `EndlessMode.unity`.
-- **Dependencies**: Step 2, Step 3
+  - Rename `ConfettiContainer` to `SeismicVfxContainer` and ensure `_vfxContainer` is bound on `ComboCelebrationController`.
+- **Dependencies**: Step 1
 
-### Step 5: Update Automated Verification Suite (`ComboCelebrationTests.cs`)
+### Step 3: Update Automated Verification Suite (`ComboCelebrationTests.cs`)
 - **Files**: `Assets/Editor/Tests/ComboCelebrationTests.cs`
 - **Details**:
-  - Update editor tests to verify the `0.2s` start delay, the extended `2.25s` celebration duration, absence of combo length text, absence of spinning sunburst, presence and motion of construction caution/ticker tape, and guaranteed screen-bounds fit for every congratulatory word across narrow aspect ratios.
-- **Dependencies**: Step 1, Step 2, Step 3, Step 4
+  - Replace `ActiveConfettiCount` assertions with checks for `ActiveShockwaveCount` (`>= 2`) and `ActiveRubbleCount` (`>= 16`), shockwave ring expansion, absence of `Confetti_` objects, and full cleanup on dismissal and `ClearAndSynchronize()`.
+- **Dependencies**: Step 1, Step 2
 
 # Verification & Testing
 - Run `Tools/City Blocks/Tests/Combo Celebration Checks` via `EditorApplication.ExecuteMenuItem` to verify:
   1. Placing a tower that results in 1 or 2 merges does **not** activate the fullscreen takeover.
-  2. Placing a tower that results in 3, 4, or 5+ merges activates the celebration after `grid.IsSettled()`, waiting `0.2s` (`_startDelay`) before visuals erupt, and running for the extended `2.25s` (`_totalDuration`).
-  3. Power-up turns with 3+ merges do **not** trigger the celebration.
-  4. Congratulatory headline text escalates by tier (3 merges vs 4 merges vs 5+ merges), displays **no** combo length text, and fits completely inside the screen bounds at peak overshoot scale.
-  5. Construction caution / ticker-tape banners replace the spinning sunburst and scroll across the screen along with confetti VFX.
+  2. Placing a tower that results in 3, 4, or 5+ merges activates the celebration after `grid.IsSettled()`, waiting `0.2s` (`_startDelay`) before visuals erupt, and running for `2.25s` (`_totalDuration`).
+  3. During the `0.2s` start delay, `ActiveShockwaveCount == 0` and `ActiveRubbleCount == 0`.
+  4. After the `0.2s` start delay, concentric seismic shockwave rings (`ActiveShockwaveCount >= 2`) expand outward and heavy angular rubble shards (`ActiveRubbleCount >= 16`) launch and tumble with heavy gravity, with zero legacy `Confetti_` objects.
+  5. Congratulatory headline text escalates by tier (3 merges vs 4 merges vs 5+ merges), displays **no** combo length text, and fits strictly inside the screen bounds at peak overshoot scale.
   6. Input (`blocksRaycasts` / move resolution) is blocked during the celebration and automatically restored when complete.
   7. Existing test suites (`Tools/City Blocks/Tests/Merge Multiplier Checks`) continue to pass without regression.

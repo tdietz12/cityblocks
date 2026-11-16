@@ -72,6 +72,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -2632,6 +2633,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -4075,6 +4077,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 1
@@ -5562,6 +5565,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -7740,6 +7744,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -7816,6 +7821,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 1
@@ -8476,6 +8482,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -8552,6 +8559,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -9212,6 +9220,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
