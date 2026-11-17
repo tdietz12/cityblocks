@@ -42,6 +42,40 @@ namespace Gameplay
         private bool _reservedForAbsorption;
         internal bool IsAnimating => _isAnimating || _reservedForAbsorption;
 
+        [Header("Level Badge")]
+        [SerializeField] private UnityEngine.UI.Image _levelColorPanel;
+        [Tooltip("Dark panel colors indexed by the level's ones digit (0–9). The number stays white.")]
+        [SerializeField] private Color[] _levelDigitColors =
+        {
+            new Color32(55, 68, 84, 255),
+            new Color32(117, 87, 22, 255),
+            new Color32(139, 51, 47, 255),
+            new Color32(137, 69, 22, 255),
+            new Color32(76, 98, 31, 255),
+            new Color32(25, 101, 70, 255),
+            new Color32(23, 97, 110, 255),
+            new Color32(38, 73, 132, 255),
+            new Color32(91, 56, 133, 255),
+            new Color32(127, 45, 96, 255)
+        };
+
+        private void Awake()
+        {
+            RefreshLevelBadge(level);
+        }
+
+        private void RefreshLevelBadge(int towerLevel)
+        {
+            if (levelText != null)
+            {
+                levelText.text = towerLevel.ToString();
+                levelText.color = Color.white;
+            }
+            int digit = Mathf.Abs(towerLevel % 10);
+            if (_levelColorPanel != null && _levelDigitColors != null && digit < _levelDigitColors.Length)
+                _levelColorPanel.color = _levelDigitColors[digit];
+        }
+
         private void Update()
         {
             if (currentLevel != level) DisplayTowerForCurrentLevel(level);
@@ -52,9 +86,7 @@ namespace Gameplay
                 transform.localScale = index > 0 ? Vector3.one * 0.5f : Vector3.one;
                 transform.position = index >= queue.visibleCount
                     ? new Vector3(0, -1000, 0)
-                    : index > 0
-                        ? new Vector3((index * -0.5f) + 1.75f, 0, -1.5f)
-                        : new Vector3(2, 0, -1.5f);
+                    : queue.PositionForSlot(index);
                 return;
             }
 
@@ -132,7 +164,7 @@ namespace Gameplay
                 return;
             }
             currentTowerPrefab = Instantiate(prefab, transform.position, Quaternion.identity, transform);
-            if (levelText != null) levelText.text = towerLevel.ToString();
+            RefreshLevelBadge(towerLevel);
             currentLevel = towerLevel;
         }
 

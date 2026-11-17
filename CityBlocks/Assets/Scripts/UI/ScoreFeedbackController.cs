@@ -26,6 +26,25 @@ namespace UI
         [SerializeField, Min(0f)] private float _worldHeightOffset = 0.7f;
         [SerializeField, Min(0f)] private float _pulseDuration = 0.15f;
         [SerializeField, Range(1f, 3f)] private float _pulseScale = 2.0f;
+        [Header("Increment Particles")]
+        [SerializeField, Range(0.01f, 0.5f)] private float _incrementBurstScale = 0.1f;
+        [SerializeField, Min(0.1f)] private float _incrementBurstDuration = 0.55f;
+        private struct IncrementRing
+        {
+            public RectTransform Rect;
+            public UnityEngine.UI.Image Image;
+            public Vector2 Origin;
+            public Vector2 Velocity;
+            public float Age;
+            public float Diameter;
+            public float Rotation;
+            public bool Shockwave;
+            public Color BaseColor;
+        }
+        private TMPro.TMP_Text _scoreLabel;
+        private readonly List<IncrementRing> _incrementRings = new List<IncrementRing>();
+        private readonly Stack<UnityEngine.UI.Image> _incrementRingPool = new Stack<UnityEngine.UI.Image>();
+        private int _lastShownMultiplier;
         private readonly List<MergeScorePopup> _active = new List<MergeScorePopup>();
         private readonly Stack<MergeScorePopup> _pool = new Stack<MergeScorePopup>();
         private GameController _game;
@@ -44,7 +63,7 @@ namespace UI
         public ComboCelebrationController ComboCelebration => _comboCelebration;
         public bool HasPendingFeedback => _active.Count > 0 || _tokens.Count > 0 || _pulsing ||
             (_multiplierCounter != null && _multiplierCounter.HasPendingPulse) || HasPendingComboCelebration;
-        internal float CounterPulseDuration => _pulseDuration;
+        internal float CounterPulseDuration => _pulseDuration * 1.3f;
         internal float CounterPulseScale => _pulseScale;
         internal static float EvaluateCounterPulse(float t, float from, float peak)
         {
@@ -84,7 +103,7 @@ namespace UI
             _recordBaseline = game != null ? game.recordScore : 0;
             _canvas = _popupLayer != null ? _popupLayer.GetComponentInParent<Canvas>() : null;
             if (_pulseTarget != null) _baseScale = _pulseTarget.localScale;
-            if (_multiplierCounter != null) _multiplierCounter.Bind(_game, _gameplayCamera, _popupLayer, _pulseDuration, _pulseScale);
+            if (_multiplierCounter != null) _multiplierCounter.Bind(_game, _gameplayCamera, _popupLayer, CounterPulseDuration, _pulseScale);
             if (_comboCelebration != null) _comboCelebration.Bind(_game);
             onDisplayedScoreChanged?.Invoke();
         }
@@ -97,7 +116,11 @@ namespace UI
             _game.onComboTurnEnded -= EndTurn;
         }
 
-        private void BeginTurn() { if (_multiplierCounter != null) _multiplierCounter.EndTurn(); }
+        private void BeginTurn()
+        {
+            _lastShownMultiplier = 1;
+            if (_multiplierCounter != null) _multiplierCounter.EndTurn();
+        }
         private void EndTurn() { if (_multiplierCounter != null) _multiplierCounter.EndTurn(); }
 
         public void Enqueue(int points, Vector3 mergeWorldPosition)
@@ -132,7 +155,12 @@ namespace UI
             popup.Begin(points, origin, multiplier >= 2 ? _multipliedRiseDuration : _riseDuration, _flightDuration, _riseDistance);
             if (multiplier >= 2)
             {
-                if (_multiplierCounter != null) _multiplierCounter.ShowMultiplier(multiplier);
+                if (_multiplierCounter != null)
+                {
+                    _multiplierCounter.ShowMultiplier(multiplier);
+                    if (multiplier > _lastShownMultiplier) SpawnIncrementBurst(_multiplierCounter.Position, true);
+                    _lastShownMultiplier = multiplier;
+                }
                 popup.PrepareMultiplier(basePoints);
                 if (_multiplierCounter != null && _multiplierTokenPrefab != null)
                 {
@@ -146,10 +174,85 @@ namespace UI
             }
         }
 
+        private void SpawnIncrementBurst(Vector2 origin, bool multiplier = false)
+        {
+            if (_comboCelebration == null || _popupLayer == null) return;
+            Sprite sprite = _comboCelebration.SquareRingSprite;
+            for (int i = 0; i < 10; i++)
+            {
+                UnityEngine.UI.Image image = null;
+                while (_incrementRingPool.Count > 0 && image == null) image = _incrementRingPool.Pop();
+                if (image == null)
+                {
+                    var go = new GameObject("IncrementRing", typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+                    image = go.GetComponent<UnityEngine.UI.Image>();
+                    image.rectTransform.SetParent(_popupLayer, false);
+                    image.rectTransform.anchorMin = image.rectTransform.anchorMax = image.rectTransform.pivot = new Vector2(0.5f, 0.5f);
+                    image.raycastTarget = false;
+                }
+                bool wave = i < 2;
+                float angle = (i - 2) * Mathf.PI * 0.25f;
+                Vector2 offset = wave ? Vector2.zero : new Vector2(Mathf.Cos(angle) * 320f, Mathf.Sin(angle) * 110f - 40f) * _incrementBurstScale;
+                Color tint;
+                if (multiplier && _multiplierCounter != null)
+                    tint = _multiplierCounter.FontColor;
+                else
+                {
+                    if (_scoreLabel == null && _scoreTarget != null)
+                        _scoreLabel = _scoreTarget.GetComponentInChildren<TMPro.TMP_Text>(true);
+                    tint = _scoreLabel != null ? _scoreLabel.color : Color.white;
+                }
+                tint.a *= 0.95f;
+                var ring = new IncrementRing
+                {
+                    Rect = image.rectTransform, Image = image, Origin = origin + offset,
+                    Velocity = wave ? new Vector2(0f, 120f) : new Vector2(Mathf.Cos(angle) * 140f, 520f + (i % 5) * 95f),
+                    Diameter = wave ? 180f + i * 34f : 68f + (i % 4) * 22f,
+                    Rotation = ((i % 5) - 2) * 4f, Shockwave = wave, BaseColor = tint
+                };
+                image.sprite = sprite;
+                image.color = tint;
+                ring.Rect.anchoredPosition = ring.Origin;
+                ring.Rect.sizeDelta = Vector2.one * ring.Diameter * _incrementBurstScale;
+                ring.Rect.localScale = Vector3.one;
+                ring.Rect.localRotation = Quaternion.Euler(0f, 0f, ring.Rotation);
+                ring.Rect.SetAsFirstSibling();
+                image.gameObject.SetActive(true);
+                _incrementRings.Add(ring);
+            }
+        }
+
+        private void AdvanceIncrementBursts(float delta)
+        {
+            for (int i = _incrementRings.Count - 1; i >= 0; i--)
+            {
+                IncrementRing ring = _incrementRings[i];
+                ring.Age += Mathf.Max(0f, delta) * (4f / 1.3f);
+                if (ring.Rect == null || ring.Age >= _incrementBurstDuration)
+                {
+                    if (ring.Image != null) { ring.Image.gameObject.SetActive(false); _incrementRingPool.Push(ring.Image); }
+                    _incrementRings.RemoveAt(i);
+                    continue;
+                }
+                float t = Mathf.Clamp01(ring.Age / _incrementBurstDuration);
+                float ease = 1f - Mathf.Pow(1f - t, 3f);
+                float motion = ring.Shockwave ? ease : (1f - Mathf.Exp(-1.65f * ring.Age)) / 1.65f;
+                ring.Rect.anchoredPosition = ring.Origin + ring.Velocity * (motion * _incrementBurstScale);
+                float diameter = ring.Shockwave ? Mathf.Lerp(ring.Diameter, 920f, ease) : ring.Diameter * Mathf.Lerp(1f, 1.32f, Smooth(t));
+                ring.Rect.sizeDelta = Vector2.one * (diameter * _incrementBurstScale);
+                ring.Rect.localRotation = Quaternion.Euler(0f, 0f, ring.Rotation + (i % 2 == 0 ? 15f : -15f) * ring.Age);
+                Color color = ring.BaseColor;
+                color.a *= 1f - Smooth(t);
+                ring.Image.color = color;
+                _incrementRings[i] = ring;
+            }
+        }
+
         private void Update(){ Advance(Time.unscaledDeltaTime); }
 
         public void Advance(float delta)
         {
+            AdvanceIncrementBursts(delta);
             if (_multiplierCounter != null) _multiplierCounter.Advance(delta);
             if (_comboCelebration != null) _comboCelebration.Advance(delta);
             if (_active.Count > 0)
@@ -168,6 +271,7 @@ namespace UI
                     if (popup == null)
                     { ClearAndSynchronize(); return; }
                     _pendingPoints -= popup.Points;
+                    if (popup.Points > 0) SpawnIncrementBurst(destination);
                     _active.RemoveAt(i);
                     _pool.Push(popup);
                     collected = true;
@@ -193,7 +297,7 @@ namespace UI
             }
             if (!_pulsing || _pulseTarget == null) return;
             _pulseAge += Mathf.Max(0f, delta);
-            float t = _pulseDuration <= 0f ? 1f : Mathf.Clamp01(_pulseAge / _pulseDuration);
+            float t = CounterPulseDuration <= 0f ? 1f : Mathf.Clamp01(_pulseAge / CounterPulseDuration);
             float scale = EvaluateCounterPulse(t, _pulseFrom, _pulseScale);
             _pulseTarget.localScale = _baseScale * scale;
             if (t >= 1f) { _pulsing = false; _pulseTarget.localScale = _baseScale; }
@@ -209,6 +313,10 @@ namespace UI
 
         public void ClearAndSynchronize()
         {
+            foreach (IncrementRing ring in _incrementRings)
+                if (ring.Image != null) { ring.Image.gameObject.SetActive(false); _incrementRingPool.Push(ring.Image); }
+            _incrementRings.Clear();
+            _lastShownMultiplier = 1;
             foreach (MergeScorePopup popup in _active)
                 if (popup != null) { popup.Cancel(); _pool.Push(popup); }
             _active.Clear();

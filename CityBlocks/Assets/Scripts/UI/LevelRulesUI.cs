@@ -19,6 +19,7 @@ namespace UI
         [SerializeField] private GameObject scorePanel;
         [SerializeField] private TMP_Text scoreText;
         [SerializeField] private TMP_Text recordScoreText;
+        [SerializeField] private GameObject _movesPanel;
         [SerializeField] private TMP_Text movesLabel;
         [SerializeField] private ScoreFeedbackController _scoreFeedback;
         private int _deferredResult;
@@ -193,6 +194,7 @@ namespace UI
             if (_scoreFeedback != null) _scoreFeedback.ClearAndSynchronize();
             HideAllOverlayPanels();
 
+            if (_movesPanel != null) _movesPanel.SetActive(false);
             if (movesLabel != null) movesLabel.gameObject.SetActive(false);
             if (scorePanel != null) scorePanel.SetActive(true);
 
@@ -228,7 +230,8 @@ namespace UI
             RegisterListeners();
             HideAllOverlayPanels();
 
-            if (movesLabel != null) movesLabel.gameObject.SetActive(true);
+            if (_movesPanel != null) _movesPanel.SetActive(session != null);
+            if (movesLabel != null) movesLabel.gameObject.SetActive(session != null);
             if (scorePanel != null) scorePanel.SetActive(true);
 
             // Configure optional IAP button for purchasing additional moves

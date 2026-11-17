@@ -16,6 +16,7 @@ namespace Gameplay
             float tangentVertical = Mathf.Tan(camera.fieldOfView * Mathf.Deg2Rad * 0.5f);
             float tangentHorizontal = tangentVertical * camera.aspect;
             const float viewFraction = 0.82f;
+            const float horizontalViewFraction = 0.75f;
             float distance = camera.nearClipPlane + 1f;
 
             foreach (float x in new[] { worldOffset.x - 0.65f, worldOffset.x + columns - 0.35f })
@@ -27,7 +28,7 @@ namespace Gameplay
                 float up = Mathf.Abs(Vector3.Dot(camera.transform.up, offset));
                 float forward = Vector3.Dot(camera.transform.forward, offset);
                 distance = Mathf.Max(distance,
-                    right / (tangentHorizontal * viewFraction) - forward,
+                    right / (tangentHorizontal * horizontalViewFraction) - forward,
                     up / (tangentVertical * viewFraction) - forward);
             }
 

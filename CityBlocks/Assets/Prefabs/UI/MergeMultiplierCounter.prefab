@@ -92,8 +92,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 52
-  m_fontSizeBase: 52
+  m_fontSize: 32
+  m_fontSizeBase: 32
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -109,7 +109,7 @@ MonoBehaviour:
   m_lineSpacingMax: 0
   m_paragraphSpacing: 0
   m_charWidthMaxAdj: 0
-  m_TextWrappingMode: 1
+  m_TextWrappingMode: 0
   m_wordWrappingRatios: 0.4
   m_overflowMode: 0
   m_linkedTextComponent: {fileID: 0}
@@ -166,7 +166,7 @@ RectTransform:
   m_GameObject: {fileID: 8764625234955229637}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 1.4595065, y: 1.4595065, z: 1.4595065}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7974942753633126458}
@@ -175,7 +175,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 128, y: 76}
+  m_SizeDelta: {x: 88, y: 36}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4855436572543528974
 CanvasRenderer:
@@ -241,6 +241,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::UI.MergeMultiplierCounter
   _label: {fileID: 3645035602000018401}
   _group: {fileID: 9037927974996972024}
+  _movesPanelAnchor: {fileID: 0}
+  _scorePanelAnchor: {fileID: 0}
+  _hudClearance: 6
+  _displayScale: 1.4595065
   _inset: {x: 8, y: 8}
   _holdDuration: 2
   _shrinkDuration: 0.18

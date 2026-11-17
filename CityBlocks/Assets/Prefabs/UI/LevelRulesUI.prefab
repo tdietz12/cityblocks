@@ -473,6 +473,8 @@ MonoBehaviour:
   _worldHeightOffset: 0.7
   _pulseDuration: 0.15
   _pulseScale: 2
+  _incrementBurstScale: 0.1
+  _incrementBurstDuration: 0.55
 --- !u!1 &697551407227882694
 GameObject:
   m_ObjectHideFlags: 0
@@ -8359,6 +8361,7 @@ MonoBehaviour:
   scorePanel: {fileID: 697551407227882694}
   scoreText: {fileID: 1745590209558976520}
   recordScoreText: {fileID: 6946661018147794948}
+  _movesPanel: {fileID: 3167109152797639087}
   movesLabel: {fileID: 6949042341568872780}
   _scoreFeedback: {fileID: 3839417488606413022}
   scoreObjectivesCard: {fileID: 3643503891343210208}
@@ -9788,6 +9791,26 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 6263742034210825382}
     m_Modifications:
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _inset.x
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _inset.y
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _movesPanelAnchor
+      value: 
+      objectReference: {fileID: 3316583978700806625}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _scorePanelAnchor
+      value: 
+      objectReference: {fileID: 6837302165658161817}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_Pivot.x
@@ -9821,12 +9844,12 @@ PrefabInstance:
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_SizeDelta.x
-      value: 128
+      value: 88
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_SizeDelta.y
-      value: 76
+      value: 36
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}

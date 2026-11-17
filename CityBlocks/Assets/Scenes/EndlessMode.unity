@@ -205,6 +205,26 @@ PrefabInstance:
       propertyPath: m_TextStyleHashCode
       value: -1183493901
       objectReference: {fileID: 0}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _inset.x
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _inset.y
+      value: 18
+      objectReference: {fileID: 0}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _movesPanelAnchor
+      value: 
+      objectReference: {fileID: 478324185}
+    - target: {fileID: 6634865120684239336, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: _scorePanelAnchor
+      value: 
+      objectReference: {fileID: 4774291500326119045}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_Pivot.x
@@ -238,12 +258,27 @@ PrefabInstance:
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_SizeDelta.x
-      value: 128
+      value: 88
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_SizeDelta.y
-      value: 76
+      value: 36
+      objectReference: {fileID: 0}
+    - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.4595065
+      objectReference: {fileID: 0}
+    - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: m_LocalScale.y
+      value: 1.4595065
+      objectReference: {fileID: 0}
+    - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
+        type: 3}
+      propertyPath: m_LocalScale.z
+      value: 1.4595065
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
@@ -283,12 +318,12 @@ PrefabInstance:
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 180
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -180
+      value: 214.91887
       objectReference: {fileID: 0}
     - target: {fileID: 6858481014827285269, guid: d5658095b52ad4f369433fbbe0025fd3,
         type: 3}
@@ -899,7 +934,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &478324185
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1365,6 +1400,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   visibleCount: 2
+  _depth: -1.0114942
 --- !u!4 &854057677
 Transform:
   m_ObjectHideFlags: 0
@@ -1517,7 +1553,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 45
+  field of view: 51
   orthographic: 0
   orthographic size: 5
   m_Depth: 0
@@ -1544,7 +1580,7 @@ Transform:
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
   m_LocalRotation: {x: 0.5, y: 0, z: 0, w: 0.8660254}
-  m_LocalPosition: {x: 1.5, y: 9.5, z: -4.5}
+  m_LocalPosition: {x: 1.5, y: 9.8520975, z: -3.8901496}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2104,6 +2140,8 @@ MonoBehaviour:
   _worldHeightOffset: 0.7
   _pulseDuration: 0.15
   _pulseScale: 2
+  _incrementBurstScale: 0.1
+  _incrementBurstDuration: 0.55
 --- !u!224 &1261362802
 RectTransform:
   m_ObjectHideFlags: 0
@@ -3101,7 +3139,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 45
+  field of view: 51
   orthographic: 0
   orthographic size: 5
   m_Depth: 1
@@ -7528,6 +7566,7 @@ MonoBehaviour:
   scorePanel: {fileID: 1517002258232834266}
   scoreText: {fileID: 331823568778374164}
   recordScoreText: {fileID: 8990369782088467480}
+  _movesPanel: {fileID: 478324184}
   movesLabel: {fileID: 8992773637477381456}
   _scoreFeedback: {fileID: 1261362801}
   scoreObjectivesCard: {fileID: 1237488169}
@@ -7826,6 +7865,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -10014,6 +10054,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -10297,6 +10338,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -13178,6 +13220,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -13345,6 +13388,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 1
@@ -13708,6 +13752,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -13815,6 +13860,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0
@@ -14543,6 +14589,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 1
@@ -15149,6 +15196,7 @@ MonoBehaviour:
   _startScale: 0.82
   _overshootScale: 1.04
   _entranceDuration: 0.22
+  _exitDuration: 0.16
   _fadeDuration: 0.16
   _buttonStaggerDelay: 0.04
   _shakeOnEnable: 0

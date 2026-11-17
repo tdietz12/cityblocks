@@ -17,13 +17,10 @@ namespace UI
         private static readonly string[] Tier4Words = { "AMAZING!", "SPECTACULAR!", "FANTASTIC!" };
         private static readonly string[] Tier5PlusWords = { "UNBELIEVABLE!", "LEGENDARY!", "INCREDIBLE!" };
 
-        // Matches Assets/Prefabs/LevelUpEffect/LevelUpEffect.prefab startColor (Golden Yellow #FFCD00 to White #FFFFFF)
+        // Pure white square rings, matching the white level-up particles.
         private static readonly Color[] LevelUpRingPalette =
         {
-            new Color(1.00f, 0.804f, 0.00f, 0.95f), // LevelUpEffect Golden Yellow (r:1, g:0.803653, b:0)
-            new Color(1.00f, 1.00f, 1.00f, 0.95f),  // LevelUpEffect Pure White (r:1, g:1, b:1)
-            new Color(1.00f, 0.88f, 0.32f, 0.90f),  // Warm Gold Midtone
-            new Color(1.00f, 0.95f, 0.65f, 0.92f)   // Soft Sunlit White-Gold
+            new Color(1f, 1f, 1f, 0.95f)
         };
 
         private static Sprite _cachedProceduralSquareRingSprite;
@@ -48,6 +45,8 @@ namespace UI
         [SerializeField, Min(0.05f)] private float _fadeInDuration = 0.18f;
         [SerializeField, Min(0.05f)] private float _popDuration = 0.28f;
         [SerializeField, Min(0.05f)] private float _fadeOutDuration = 0.30f;
+        [Tooltip("Extra real-time seconds the headline remains after the particle timeline.")]
+        [SerializeField, Min(0f)] private float _headlineHoldDuration = 0.35f;
         [SerializeField, Range(0f, 0.9f)] private float _backdropPeakAlpha = 0.58f;
         [SerializeField, Min(1f)] private float _headlineOvershootScale = 1.08f;
         [SerializeField, Min(4f)] private float _screenHorizontalPadding = 16f;
@@ -59,6 +58,7 @@ namespace UI
         {
             public RectTransform Rect;
             public Image Graphic;
+            public Vector2 Origin;
             public float StartDiameter;
             public float EndDiameter;
             public float RiseDistance;
@@ -97,9 +97,11 @@ namespace UI
         private int _variantCounter;
 
         public bool IsCelebrating => _celebrating;
-        public bool IsInStartDelay => _celebrating && _age < _startDelay;
-        public float StartDelay => _startDelay;
-        public float TotalDuration => _totalDuration;
+        public Sprite SquareRingSprite => GetOrCreateSquareRingSprite();
+        public bool IsInStartDelay => _celebrating && _age < StartDelay * 2f;
+        public float StartDelay => _startDelay * 0.5f + 0.2f;
+        private float HeadlineTimelineDuration => _totalDuration + _headlineHoldDuration * 2f;
+        public float TotalDuration => HeadlineTimelineDuration * 0.5f;
         public string CurrentHeadline => _headlineLabel != null ? _headlineLabel.text : string.Empty;
         public int LastCelebratedMergeCount { get; private set; }
 
@@ -208,7 +210,7 @@ namespace UI
                 _canvasGroup.interactable = false;
             }
 
-            if (_startDelay <= 0f)
+            if (StartDelay <= 0f)
             {
                 BeginVisualTakeover();
                 EvaluateFrame(0f);
@@ -304,17 +306,17 @@ namespace UI
         public void Advance(float delta)
         {
             if (!_celebrating) return;
-            delta = Mathf.Max(0f, delta);
+            delta = Mathf.Max(0f, delta) * 2f;
             _age += delta;
 
-            if (_age < _startDelay)
+            if (_age < StartDelay * 2f)
             {
                 HideVisualElements();
                 return;
             }
 
-            float activeTime = _age - _startDelay;
-            if (activeTime >= _totalDuration)
+            float activeTime = _age - StartDelay * 2f;
+            if (activeTime >= HeadlineTimelineDuration)
             {
                 ClearImmediate();
                 return;
@@ -330,7 +332,7 @@ namespace UI
 
         private void EvaluateFrame(float time)
         {
-            float fadeOutStart = Mathf.Max(_fadeInDuration, _totalDuration - _fadeOutDuration);
+            float fadeOutStart = Mathf.Max(_fadeInDuration, HeadlineTimelineDuration - _fadeOutDuration);
             float envelope;
             if (time < _fadeInDuration)
             {
@@ -442,11 +444,37 @@ namespace UI
             }
         }
 
+        private Vector2 HeadlineBurstPosition(int index, int count)
+        {
+            if (_headlineLabel == null || _vfxContainer == null) return Vector2.zero;
+            var info = _headlineLabel.textInfo;
+            int visibleCount = 0;
+            for (int i = 0; i < info.characterCount; i++)
+                if (info.characterInfo[i].isVisible) visibleCount++;
+            if (visibleCount == 0)
+                return _vfxContainer.InverseTransformPoint(_headlineLabel.transform.position);
+            int target = index * visibleCount / Mathf.Max(1, count);
+            for (int i = 0; i < info.characterCount; i++)
+            {
+                var character = info.characterInfo[i];
+                if (!character.isVisible) continue;
+                if (target-- != 0) continue;
+                Vector3 point = Vector3.Lerp(character.bottomLeft, character.topRight, 0.25f + (index % 5) * 0.125f);
+                return _vfxContainer.InverseTransformPoint(_headlineLabel.transform.TransformPoint(point));
+            }
+            return Vector2.zero;
+        }
+
         private void SpawnSeismicBurst(int mergeCount)
         {
             if (_vfxContainer == null) return;
+            if (_bannerRoot != null) _bannerRoot.localScale = Vector3.one * _fitBaseScale;
+            if (_headlineLabel != null) _headlineLabel.ForceMeshUpdate();
+            Vector2 textCenter = _headlineLabel != null
+                ? (Vector2)_vfxContainer.InverseTransformPoint(_headlineLabel.transform.TransformPoint(_headlineLabel.textBounds.center))
+                : Vector2.zero;
 
-            int targetWaveCount = mergeCount >= 5 ? 5 : (mergeCount == 4 ? 4 : 3);
+            int targetWaveCount= mergeCount >= 5 ? 5 : (mergeCount == 4 ? 4 : 3);
             int targetRisingRingCount = Mathf.Clamp(_ringBurstCount + (mergeCount - 3) * 6, 16, 40);
 
             EnsureLevelUpRingPool(targetWaveCount, targetRisingRingCount);
@@ -461,11 +489,12 @@ namespace UI
                     continue;
                 }
 
+                ring.Origin = textCenter;
                 ring.StartDiameter = 180f + i * 34f;
                 ring.EndDiameter = 920f + i * 140f + (mergeCount >= 5 ? 110f : 0f);
-                ring.RiseDistance = 120f + i * 32f;
-                ring.StartRotation = (i % 2 == 0 ? 1f : -1f) * (i * 8f);
-                ring.AngularVelocity = (i % 2 == 0 ? 1f : -1f) * (28f + i * 8f);
+                ring.RiseDistance = 0f;
+                ring.StartRotation = (i % 2 == 0 ? 1f : -1f) * (i * 2f);
+                ring.AngularVelocity = (i % 2 == 0 ? 1f : -1f) * (6f + i * 2f);
                 ring.BaseColor = LevelUpRingPalette[i % LevelUpRingPalette.Length];
                 ring.Delay = i * 0.09f;
                 ring.Duration = 0.78f + i * 0.08f;
@@ -473,7 +502,7 @@ namespace UI
                 if (ring.Rect != null)
                 {
                     ring.Rect.gameObject.SetActive(true);
-                    ring.Rect.anchoredPosition = Vector2.zero;
+                    ring.Rect.anchoredPosition = ring.Origin;
                     ring.Rect.sizeDelta = new Vector2(ring.StartDiameter, ring.StartDiameter);
                     ring.Rect.localRotation = Quaternion.Euler(0f, 0f, ring.StartRotation);
                     ring.Rect.localScale = Vector3.one;
@@ -496,18 +525,13 @@ namespace UI
                 }
 
                 float angle = (i / (float)targetRisingRingCount) * Mathf.PI * 2f + ((i % 3) - 1) * 0.12f;
-                float donutRadiusX = 320f + (i % 5) * 48f;
-                float donutRadiusY = 110f + (i % 4) * 28f;
-                Vector2 spawnPos = new Vector2(Mathf.Cos(angle) * donutRadiusX, Mathf.Sin(angle) * donutRadiusY - 40f);
-
-                // Upward rising velocity with gentle outward expansion (matching LevelUpEffect's upward VelocityModule + dampen)
-                float radialOutSpeed = 140f + (i % 4) * 35f;
-                float upwardSpeed = 520f + (i % 5) * 95f + (mergeCount >= 4 ? 75f : 0f);
+                Vector2 spawnPos = HeadlineBurstPosition(i, targetRisingRingCount);
+                float burstSpeed = 600f + (i % 5) * 70f + (mergeCount >= 4 ? 75f : 0f);
                 item.StartPosition = spawnPos;
-                item.Velocity = new Vector2(Mathf.Cos(angle) * radialOutSpeed, upwardSpeed);
-                item.Rotation = (i * 29f) % 360f;
-                // LevelUpEffect RotationModule uses ±2.094 rad/s (±120 deg/s)
-                item.AngularVelocity = (i % 2 == 0 ? 1f : -1f) * (75f + (i % 4) * 20f);
+                item.Velocity = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * burstSpeed;
+                item.Rotation = ((i % 5) - 2) * 4f;
+                // Gentle spin keeps the square-ring silhouettes readable during the burst.
+                item.AngularVelocity = (i % 2 == 0 ? 1f : -1f) * (15f + (i % 4) * 4f);
 
                 // LevelUpEffect startSize uses 0.75..1.5 ratio of square rings
                 float squareSide = 68f + (i % 4) * 22f;
@@ -578,7 +602,7 @@ namespace UI
                 float diameter = Mathf.Lerp(ring.StartDiameter, ring.EndDiameter, easeOut);
                 float rot = ring.StartRotation + ring.AngularVelocity * localTime;
 
-                ring.Rect.anchoredPosition = new Vector2(0f, ring.RiseDistance * easeOut);
+                ring.Rect.anchoredPosition = ring.Origin + new Vector2(0f, ring.RiseDistance * easeOut);
                 ring.Rect.sizeDelta = new Vector2(diameter, diameter);
                 ring.Rect.localRotation = Quaternion.Euler(0f, 0f, rot);
                 ring.Rect.localScale = Vector3.one;
@@ -606,6 +630,11 @@ namespace UI
                     continue;
                 }
 
+                if (localTime >= item.Lifetime)
+                {
+                    item.Rect.gameObject.SetActive(false);
+                    continue;
+                }
                 float lifeT = Mathf.Clamp01(localTime / item.Lifetime);
                 float dampedTime = (1f - Mathf.Exp(-upwardDamping * localTime)) / upwardDamping;
                 Vector2 pos = item.StartPosition + item.Velocity * dampedTime;
