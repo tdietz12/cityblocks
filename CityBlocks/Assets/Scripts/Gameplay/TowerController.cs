@@ -38,6 +38,14 @@ namespace Gameplay
         [SerializeField, Min(0f)] private float _horizontalChainDelay = 0.15f;
         [Tooltip("Visual space below a full-column top tower while it slides into the incoming survivor.")]
         [SerializeField, Range(0.1f, 0.8f)] private float _topMergeContactOffset = 0.45f;
+        [Tooltip("Time for a queued tower to slide/grow into the next queue slot when the queue advances.")]
+        [SerializeField, Min(0f)] private float _queueAdvanceDuration = 0.2f;
+        /// <summary>Set by GameController for the tower spawned when the queue advances, so it grows upward into its slot.</summary>
+        internal bool growOnQueueEntry;
+        private int _queueSlot = -1;
+        private float _queueMoveElapsed;
+        private Vector3 _queueMoveFromPosition;
+        private Vector3 _queueMoveFromScale;
         private bool _isAnimating;
         private bool _reservedForAbsorption;
         internal bool IsAnimating => _isAnimating || _reservedForAbsorption;
@@ -82,11 +90,7 @@ namespace Gameplay
 
             if (state == TowerState.queue)
             {
-                int index = queue.towerQueue.IndexOf(gameObject);
-                transform.localScale = index > 0 ? Vector3.one * 0.5f : Vector3.one;
-                transform.position = index >= queue.visibleCount
-                    ? new Vector3(0, -1000, 0)
-                    : queue.PositionForSlot(index);
+                UpdateQueuePresentation();
                 return;
             }
 
@@ -96,6 +100,59 @@ namespace Gameplay
             else if (merge && !grid.HasPendingMovement(this) && grid.TryBeginMerge(this))
                 StartCoroutine(RunMotion(Merge()));
             else if (!merge) transform.position = grid.WorldPosition(col, row);
+        }
+
+        private void UpdateQueuePresentation()
+        {
+            int index = queue.towerQueue.IndexOf(gameObject);
+            Vector3 targetScale = index > 0 ? Vector3.one * 0.5f : Vector3.one;
+            if (index >= queue.visibleCount)
+            {
+                _queueSlot = -1;
+                transform.localScale = targetScale;
+                transform.position = new Vector3(0, -1000, 0);
+                return;
+            }
+
+            Vector3 targetPosition = queue.PositionForSlot(index);
+            if (index != _queueSlot)
+            {
+                // Queue advance: visible towers slide to their new slot; the tower revealed into the last visible
+                // slot grows upward from its base (building pivots sit at y = 0). Other reveals (level start, load) snap in.
+                bool wasVisible = _queueSlot >= 0;
+                bool grow = !wasVisible && growOnQueueEntry;
+                growOnQueueEntry = false;
+                _queueSlot = index;
+                if (wasVisible)
+                {
+                    _queueMoveFromPosition = transform.position;
+                    _queueMoveFromScale = transform.localScale;
+                    _queueMoveElapsed = 0f;
+                }
+                else if (grow)
+                {
+                    _queueMoveFromPosition = targetPosition;
+                    _queueMoveFromScale = new Vector3(targetScale.x, 0f, targetScale.z);
+                    _queueMoveElapsed = 0f;
+                }
+                else
+                {
+                    _queueMoveElapsed = _queueAdvanceDuration;
+                }
+            }
+
+            if (_queueMoveElapsed < _queueAdvanceDuration)
+            {
+                _queueMoveElapsed += Time.deltaTime;
+                float t = Mathf.Clamp01(_queueMoveElapsed / _queueAdvanceDuration);
+                float eased = t * t * (3f - 2f * t);
+                transform.position = Vector3.LerpUnclamped(_queueMoveFromPosition, targetPosition, eased);
+                transform.localScale = Vector3.LerpUnclamped(_queueMoveFromScale, targetScale, eased);
+                return;
+            }
+
+            transform.position = targetPosition;
+            transform.localScale = targetScale;
         }
 
         private IEnumerator RunMotion(IEnumerator motion)

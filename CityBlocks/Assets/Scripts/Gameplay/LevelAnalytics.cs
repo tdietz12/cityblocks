@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Gameplay
 {
-    /// <summary>Firebase Analytics event facade.</summary>
+    /// <summary>Analytics event facade. Sends every event to UGS Analytics via CloudServices.AnalyticsSink.</summary>
     public static class LevelAnalytics
     {
         public static event Action<string, IDictionary<string, object>> EventRecorded;
@@ -14,24 +14,30 @@ namespace Gameplay
             Dictionary<string, object> parameters = new Dictionary<string, object>();
             for (int i = 0; i + 1 < keyValuePairs.Length; i += 2)
                 parameters[(string)keyValuePairs[i]] = keyValuePairs[i + 1];
+            AddCommonParameters(parameters);
 
             try { EventRecorded?.Invoke(eventName, parameters); }
             catch (Exception exception) { Debug.LogException(exception); }
 
-            Firebase.Analytics.Parameter[] firebaseParameters = new Firebase.Analytics.Parameter[parameters.Count];
-            int index = 0;
-            foreach (KeyValuePair<string, object> parameter in parameters)
-            {
-                if (parameter.Value is string stringValue)
-                    firebaseParameters[index++] = new Firebase.Analytics.Parameter(parameter.Key, stringValue);
-                else if (parameter.Value is double doubleValue)
-                    firebaseParameters[index++] = new Firebase.Analytics.Parameter(parameter.Key, doubleValue);
-                else if (parameter.Value is float floatValue)
-                    firebaseParameters[index++] = new Firebase.Analytics.Parameter(parameter.Key, (double)floatValue);
-                else
-                    firebaseParameters[index++] = new Firebase.Analytics.Parameter(parameter.Key, Convert.ToInt64(parameter.Value));
-            }
-            FirebaseBootstrap.LogEvent(eventName, firebaseParameters);
+            try { CloudServices.AnalyticsSink.Record(eventName, parameters); }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
+
+        /// <summary>
+        /// Parameters attached to every event. is_online is reachability-only until the heartbeat (Step 24);
+        /// account_kind becomes gamecenter/apple/guest in Step 15. Call-site values with the same key win.
+        /// </summary>
+        private static void AddCommonParameters(Dictionary<string, object> parameters)
+        {
+            AddIfMissing(parameters, "player_level_max", LevelProgressStore.HighestUnlockedLevel);
+            AddIfMissing(parameters, "session_number", CloudServices.AnalyticsSink.SessionNumber);
+            AddIfMissing(parameters, "is_online", Application.internetReachability != NetworkReachability.NotReachable ? 1 : 0);
+            AddIfMissing(parameters, "account_kind", CloudServices.CloudBootstrap.AccountKind);
+        }
+
+        private static void AddIfMissing(Dictionary<string, object> parameters, string key, object value)
+        {
+            if (!parameters.ContainsKey(key)) parameters[key] = value;
         }
 
         public static void LevelStarted(int level, int attempt) => Record("level_start", "level_number", level, "attempt_number", attempt);

@@ -299,8 +299,24 @@ namespace UI
             _pulseAge += Mathf.Max(0f, delta);
             float t = CounterPulseDuration <= 0f ? 1f : Mathf.Clamp01(_pulseAge / CounterPulseDuration);
             float scale = EvaluateCounterPulse(t, _pulseFrom, _pulseScale);
-            _pulseTarget.localScale = _baseScale * scale;
-            if (t >= 1f) { _pulsing = false; _pulseTarget.localScale = _baseScale; }
+            TextCenteredPulse.Apply(_pulseTarget, PulseLabel, _baseScale, scale);
+            if (t >= 1f) { _pulsing = false; TextCenteredPulse.Reset(_pulseTarget, _baseScale); }
+        }
+
+        internal RectTransform ScorePulseTarget => _pulseTarget;
+        internal TMPro.TMP_Text ScorePulseLabel => PulseLabel;
+        /// <summary>Current score pulse scale relative to rest (1 when not pulsing).</summary>
+        internal float ScorePulseFactor => _pulseTarget != null && _baseScale.x != 0f ? _pulseTarget.localScale.x / _baseScale.x : 1f;
+
+        private TMPro.TMP_Text _pulseLabel;
+        /// <summary>The score text the pulse is centered on (the pulse target itself or its first TMP child).</summary>
+        private TMPro.TMP_Text PulseLabel
+        {
+            get
+            {
+                if (_pulseLabel == null && _pulseTarget != null) _pulseLabel = _pulseTarget.GetComponentInChildren<TMPro.TMP_Text>(true);
+                return _pulseLabel;
+            }
         }
 
         private static float Smooth(float t) => t * t * (3f - 2f * t);
@@ -327,7 +343,7 @@ namespace UI
             if (_comboCelebration != null) _comboCelebration.ClearImmediate();
             _pendingPoints = 0;
             _pulsing = false;
-            if (_pulseTarget != null) _pulseTarget.localScale = _baseScale;
+            TextCenteredPulse.Reset(_pulseTarget, _baseScale);
             _recordBaseline = _game != null ? _game.recordScore : 0;
             onDisplayedScoreChanged?.Invoke();
         }

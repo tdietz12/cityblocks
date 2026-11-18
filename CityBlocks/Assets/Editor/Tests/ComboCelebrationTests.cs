@@ -48,9 +48,10 @@ namespace CityBlocks.EditorTests
                 float startDelay = (float)Property(celebration, "StartDelay");
                 float totalDuration = (float)Property(celebration, "TotalDuration");
 
-                // Verify timing configuration: 0.2s start delay and 2.25s celebration duration (extended by 0.8s from 1.45s)
-                Check(Mathf.Abs(startDelay - 0.2f) < 0.001f, "StartDelay must be 0.2s, got: " + startDelay);
-                Check(Mathf.Abs(totalDuration - 2.25f) < 0.001f, "TotalDuration must be extended by 0.8s to 2.25s, got: " + totalDuration);
+                // Verify real-time timing configuration. The controller plays its timeline at 2x speed:
+                // StartDelay = _startDelay(0.2) * 0.5 + 0.2 = 0.3s, TotalDuration = (_totalDuration(2.25) + 2 * _headlineHoldDuration(0.35)) * 0.5 = 1.475s.
+                Check(Mathf.Abs(startDelay - 0.3f) < 0.001f, "StartDelay must be 0.3s real time, got: " + startDelay);
+                Check(Mathf.Abs(totalDuration - 1.475f) < 0.001f, "TotalDuration must be 1.475s real time, got: " + totalDuration);
 
                 // Verify spinning sunburst, combo length subtitle, and caution tape banners are removed
                 Check(celebration.transform.Find("SunburstRays") == null, "Spinning SunburstRays must be removed");
@@ -87,13 +88,13 @@ namespace CityBlocks.EditorTests
                 Check((int)Property(celebration, "ActiveShockwaveCount") == 0 && (int)Property(celebration, "ActiveRubbleCount") == 0,
                     "Seismic shockwaves and rubble burst must wait for the 0.2s start delay to finish");
 
-                // Advance halfway through the 0.2s delay (0.1s) - still delayed
-                Call(feedback, "Advance", 0.1f);
-                Check((bool)Property(celebration, "IsInStartDelay") && group.alpha == 0f, "Visuals must remain hidden at 0.1s (< 0.2s start delay)");
+                // Advance halfway through the start delay - still delayed
+                Call(feedback, "Advance", startDelay * 0.5f);
+                Check((bool)Property(celebration, "IsInStartDelay") && group.alpha == 0f, "Visuals must remain hidden halfway through the start delay");
 
-                // Advance past the 0.2s delay (+0.15s -> 0.05s into active celebration)
-                Call(feedback, "Advance", 0.15f);
-                Check(!(bool)Property(celebration, "IsInStartDelay") && (bool)Property(celebration, "IsCelebrating"), "Celebration must exit start delay after 0.2s");
+                // Advance past the start delay (-> 0.05s into active celebration)
+                Call(feedback, "Advance", startDelay * 0.5f + 0.05f);
+                Check(!(bool)Property(celebration, "IsInStartDelay") && (bool)Property(celebration, "IsCelebrating"), "Celebration must exit start delay after StartDelay");
                 Check((int)Property(celebration, "LastCelebratedMergeCount") == 3, "LastCelebratedMergeCount must be 3");
                 Check((string)Property(celebration, "CurrentHeadline") == "AWESOME!", "3-merge tier headline should start with AWESOME!");
                 Check((int)Property(celebration, "ActiveShockwaveCount") >= 2, "Seismic shockwave rings must spawn once start delay completes");
@@ -116,7 +117,7 @@ namespace CityBlocks.EditorTests
                       firstRubble.GetComponent<UnityEngine.UI.Image>().sprite.texture == ringTexture,
                       "Celebration rings must use the building LevelUpEffect Square.png ring texture");
                 float ringWidthEarly = firstRing.sizeDelta.x;
-                float risingRingYEarly = firstRubble.anchoredPosition.y;
+                Vector2 burstRingPosEarly = firstRubble.anchoredPosition;
 
                 // 4. Advance animation to mid-pop and verify banner, square ring expansion, and upward rising motion
                 Call(feedback, "Advance", 0.25f);
@@ -124,17 +125,17 @@ namespace CityBlocks.EditorTests
                 Check(bannerRoot.localScale.x > 0.7f, "Headline banner must animate in");
                 Check(firstRing.sizeDelta.x > ringWidthEarly + 200f && Mathf.Abs(firstRing.sizeDelta.x - firstRing.sizeDelta.y) < 0.01f,
                     "Expanding square ring must expand rapidly outward with 1:1 square proportions");
-                Check(firstRubble.anchoredPosition.y > risingRingYEarly + 40f,
-                    "Rising square rings must stream upward like the building LevelUpEffect");
+                Check(Vector2.Distance(firstRubble.anchoredPosition, burstRingPosEarly) > 40f,
+                    "Burst square rings must travel outward from the headline (radial burst)");
                 Check(Mathf.Abs(firstRubble.localScale.x - firstRubble.localScale.y) < 0.001f && firstRubble.localScale.x > 0.5f,
                     "Rising square ring must maintain uniform 1:1 square scale without paper-confetti Y-flip distortion");
 
-                // Verify celebration is still active at 1.6s into active celebration (since duration was extended to 2.25s)
-                Call(feedback, "Advance", 1.3f);
-                Check((bool)Property(celebration, "IsCelebrating"), "Extended celebration must still be active at 1.6s (total duration 2.25s)");
+                // Verify celebration is still active 0.1s before TotalDuration ends (currently 0.3s into active celebration)
+                Call(feedback, "Advance", totalDuration - 0.3f - 0.1f);
+                Check((bool)Property(celebration, "IsCelebrating"), "Celebration must still be active 0.1s before TotalDuration (" + totalDuration + "s) ends");
 
                 // 5. Advance past totalDuration and verify auto-dismissal
-                Call(feedback, "Advance", 0.8f);
+                Call(feedback, "Advance", 0.2f);
                 Check(!(bool)Property(celebration, "IsCelebrating"), "Celebration must auto-dismiss after startDelay + totalDuration");
                 Check(!group.blocksRaycasts && group.alpha == 0f, "Dismissed celebration must restore input and hide overlay");
                 Check((int)Property(celebration, "ActiveShockwaveCount") == 0 && (int)Property(celebration, "ActiveRubbleCount") == 0,
@@ -230,7 +231,7 @@ namespace CityBlocks.EditorTests
                 Check(Mathf.Abs((float)Get(towerComponent, "_preMergeDelay") - 0.1f) < 0.0001f, "Tower.prefab _preMergeDelay must be 0.1s");
 
                 Call(feedback, "ClearAndSynchronize");
-                Debug.Log("[ComboCelebrationTest] " + _checks + " checks passed: 0.2s delay, 2.25s extended duration, caution tape aesthetic, screen-fit text, and tier checks.");
+                Debug.Log("[ComboCelebrationTest] " + _checks + " checks passed: " + startDelay + "s delay, " + totalDuration + "s duration, square-ring VFX, screen-fit text, and tier checks.");
                 SessionState.SetString("ComboCelebrationTest.Result", "passed " + _checks);
             }
             finally

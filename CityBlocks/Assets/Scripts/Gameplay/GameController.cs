@@ -598,6 +598,12 @@ namespace Gameplay
                 }
             }
 
+            // The tower now occupying the last visible slot was hidden before the advance; it grows upward into place
+            // while the others slide forward. TowerController only uses the flag on a hidden -> visible transition.
+            int lastVisibleIndex = Mathf.Min(queue.visibleCount, queue.towerQueue.Count) - 1;
+            if (lastVisibleIndex >= 0 && queue.towerQueue[lastVisibleIndex] != null)
+                queue.towerQueue[lastVisibleIndex].GetComponent<TowerController>().growOnQueueEntry = true;
+
             onTowerPlaced?.Invoke(column);
 
             StartCoroutine(SaveLevelAfterMove());

@@ -18,6 +18,7 @@ namespace UI
         private float _holdRemaining;
         private RectTransform _rect;
         private RectTransform _layer;
+        private ScoreFeedbackController _feedback;
         private GameController _game;
         private Camera _camera;
         private Camera _uiCamera;
@@ -41,6 +42,7 @@ namespace UI
             if (_label == null) _label = GetComponentInChildren<TMPro.TMP_Text>(true);
             _baseScale = Vector3.one * _displayScale;
             _game = game; _camera = camera; _layer = layer;
+            if (_feedback == null) _feedback = GetComponentInParent<ScoreFeedbackController>(true);
             _duration = duration; _peak = peak;
             var canvas = layer.GetComponentInParent<Canvas>();
             _uiCamera = canvas != null && canvas.renderMode != RenderMode.ScreenSpaceOverlay ? canvas.worldCamera : null;
@@ -120,6 +122,30 @@ namespace UI
         }
 
         private void LateUpdate() { Reposition(); }
+
+        /// <summary>
+        /// Maps a world point on the score panel back to where it sits when the score is not pulsing.
+        /// The score pulse scales around the score text's visible center, so the rest point is
+        /// center + (point - center) / factor. Only applies when the anchor is inside the pulsing hierarchy.
+        /// </summary>
+        private Vector3 UndoScorePulse(RectTransform anchor, Vector3 worldPoint)
+        {
+            if (_feedback == null) return worldPoint;
+            RectTransform pulseTarget = _feedback.ScorePulseTarget;
+            TMPro.TMP_Text scoreLabel = _feedback.ScorePulseLabel;
+            float factor = _feedback.ScorePulseFactor;
+            if (pulseTarget == null || scoreLabel == null || Mathf.Approximately(factor, 1f) || factor <= 0f) return worldPoint;
+            if (anchor != pulseTarget && !anchor.IsChildOf(pulseTarget)) return worldPoint;
+            Vector3 center = scoreLabel.transform.TransformPoint(scoreLabel.textBounds.center);
+            return center + (worldPoint - center) / factor;
+        }
+
+        /// <summary>Keeps the "xN" text's visible center fixed while the badge pulses or shrinks.</summary>
+        private Vector2 PulseCenterOffset()
+        {
+            if (_rect == null || _baseScale.x <= 0f) return Vector2.zero;
+            return TextCenteredPulse.ComputeOffset(_rect, _label, _baseScale, _rect.localScale.x / _baseScale.x);
+        }
         private Vector2 ToLayerPoint(Vector3 worldPoint)
         {
             Vector2 point;
@@ -134,8 +160,8 @@ namespace UI
                 _camera != null && _layer != null && _rect != null)
             {
                 var grid = _game.grid;
-                float upper = ToLayerPoint(_scorePanelAnchor.TransformPoint(
-                    new Vector3(_scorePanelAnchor.rect.center.x, _scorePanelAnchor.rect.yMin, 0f))).y - _hudClearance;
+                float upper = ToLayerPoint(UndoScorePulse(_scorePanelAnchor, _scorePanelAnchor.TransformPoint(
+                    new Vector3(_scorePanelAnchor.rect.center.x, _scorePanelAnchor.rect.yMin, 0f)))).y - _hudClearance;
                 if (_movesPanelAnchor != null && _movesPanelAnchor.gameObject.activeInHierarchy)
                     upper = Mathf.Min(upper, ToLayerPoint(_movesPanelAnchor.TransformPoint(
                         new Vector3(_movesPanelAnchor.rect.center.x, _movesPanelAnchor.rect.yMin, 0f))).y - _hudClearance);
@@ -166,7 +192,7 @@ namespace UI
                     float halfWidth = width * fit * peak * 0.5f;
                     _rect.anchoredPosition = new Vector2(Mathf.Clamp(gridCenter.x,
                         _layer.rect.xMin + halfWidth + _hudClearance,
-                        _layer.rect.xMax - halfWidth - _hudClearance), (upper + lower) * 0.5f);
+                        _layer.rect.xMax - halfWidth - _hudClearance), (upper + lower) * 0.5f) + PulseCenterOffset();
                     return;
                 }
             }
@@ -189,7 +215,7 @@ namespace UI
                 Rect layerBounds = _layer.rect;
                 hudPosition.x = Mathf.Clamp(hudPosition.x, layerBounds.xMin + halfSize.x, layerBounds.xMax - halfSize.x);
                 hudPosition.y = Mathf.Clamp(hudPosition.y, layerBounds.yMin + halfSize.y, layerBounds.yMax - halfSize.y);
-                _rect.anchoredPosition = hudPosition;
+                _rect.anchoredPosition = hudPosition + PulseCenterOffset();
                 return;
             }
             if (_game == null || _game.queue == null || _camera == null || _layer == null || _rect == null) return;
@@ -215,7 +241,7 @@ namespace UI
             Vector2 pulseHalf = half * Mathf.Max(1f, _peak);
             position.x = Mathf.Clamp(position.x, bounds.xMin + pulseHalf.x, bounds.xMax - pulseHalf.x);
             position.y = Mathf.Clamp(position.y, bounds.yMin + pulseHalf.y, bounds.yMax - pulseHalf.y);
-            _rect.anchoredPosition = position;
+            _rect.anchoredPosition = position + PulseCenterOffset();
         }
     }
 }

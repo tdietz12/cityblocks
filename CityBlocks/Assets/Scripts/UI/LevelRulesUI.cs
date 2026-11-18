@@ -168,12 +168,12 @@ namespace UI
             if (age >= CounterTickDuration)
             {
                 age = -1f;
-                label.transform.localScale = Vector3.one;
+                TextCenteredPulse.Reset(label.rectTransform, Vector3.one);
                 return;
             }
             float t = Mathf.Clamp01(age / CounterTickDuration);
             float scale = ScoreFeedbackController.EvaluateCounterPulse(t, 1f, CounterTickScale);
-            label.transform.localScale = Vector3.one * scale;
+            TextCenteredPulse.Apply(label.rectTransform, label, Vector3.one, scale);
         }
 
         /// <summary>

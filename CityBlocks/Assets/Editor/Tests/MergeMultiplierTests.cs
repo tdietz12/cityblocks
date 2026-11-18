@@ -73,11 +73,15 @@ namespace CityBlocks.EditorTests
                 Call(feedback, "Advance", 1f); Call(feedback, "Advance", 0.16f); Call(feedback, "Advance", 0.2f);
                 Check((int)Property(game, "DisplayedScore") == 220 && !(bool)Property(game, "HasPendingScoreFeedback"), "Final collected score or pending ledger mismatch");
                 Call(counter, "ShowMultiplier", 2); Call(counter, "EndTurn");
-                Call(counter, "Advance", (float)Get(feedback, "_pulseDuration"));
+                // The counter is bound with ScoreFeedbackController.CounterPulseDuration (_pulseDuration * 1.3), not the raw _pulseDuration.
+                float counterPulseDuration = (float)feedback.GetType().GetProperty("CounterPulseDuration", Flags).GetValue(feedback);
+                Call(counter, "Advance", counterPulseDuration);
                 Check(group.alpha == 1f && !(bool)Property(game, "HasPendingScoreFeedback"), "Badge hold should be visible but cosmetic");
                 Call(counter, "Advance", 1.9f); Check(group.alpha == 1f, "Badge disappeared before its two-second hold");
+                // Resting scale comes from the prefab's _displayScale (not 1), so compare against the held scale.
+                float heldScale = counter.transform.localScale.x;
                 Call(counter, "Advance", 0.11f);
-                Check(group.alpha > 0f && group.alpha < 1f && counter.transform.localScale.x < 1f, "Badge should shrink/fade after the hold, not abruptly turn off");
+                Check(group.alpha > 0f && group.alpha < 1f && counter.transform.localScale.x < heldScale, "Badge should shrink/fade after the hold, not abruptly turn off");
                 Call(counter, "Advance", 0.2f); Check(group.alpha == 0f, "Badge did not finish shrinking away");
                 Set(game, "hasActiveRun", true);
                 var assembly = Assembly.Load("Assembly-CSharp");
