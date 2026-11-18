@@ -393,7 +393,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 ## Milestone B — Retention tracking(client-only, works with today's game) · *added in rev. 2*
 > These steps need only Steps 1–5. They instrument the game as it is today, so you start getting retention data (D1/D7 funnels, level difficulty, restart loops, power-up use, continue conversion) **before** the accounts and cloud-inventory work. Later steps only add or adjust parameters (for example `currency=coins` on continues once coin continues exist).
 
-#### Step 6 — Session & first-launch funnel · S
+#### Step 6 — Session & first-launch funnel · S · ✅ code done (also: `account_kind` is now resolved when an event is sent, so events buffered before sign-in report the real account; register session_start/session_end in Event Manager)
 - **Files:** new `Assets/Scripts/Services/SessionTracker.cs` (`RuntimeInitializeOnLoad`, DontDestroyOnLoad; install date, session counter and last-session time kept in PlayerPrefs); `LevelAnalytics.cs` (`SessionStarted`, `SessionEnded`).
 - **Behavior:** `session_start` on cold start and on resume after more than 5 min in the background; `session_end` on `OnApplicationPause(true)` with duration and levels played. `session_number` feeds the common params from Step 4 (UGS's standard `sessionID` already covers session grouping).
 - **🔍 Checkpoint:** Background the app for more than 5 min and come back → a second `session_start` with `session_number` + 1; the first ever launch has `is_first_launch=1`.

@@ -30,7 +30,7 @@ namespace Gameplay
         private static void AddCommonParameters(Dictionary<string, object> parameters)
         {
             AddIfMissing(parameters, "player_level_max", LevelProgressStore.HighestUnlockedLevel);
-            AddIfMissing(parameters, "session_number", CloudServices.AnalyticsSink.SessionNumber);
+            AddIfMissing(parameters, "session_number", CloudServices.SessionTracker.SessionNumber);
             AddIfMissing(parameters, "is_online", Application.internetReachability != NetworkReachability.NotReachable ? 1 : 0);
             AddIfMissing(parameters, "account_kind", CloudServices.CloudBootstrap.AccountKind);
         }
@@ -40,6 +40,10 @@ namespace Gameplay
             if (!parameters.ContainsKey(key)) parameters[key] = value;
         }
 
+        public static void SessionStarted(bool isFirstLaunch, int daysSinceInstall, int daysSinceLastSession) => Record("session_start",
+            "is_first_launch", isFirstLaunch ? 1 : 0, "days_since_install", daysSinceInstall, "days_since_last_session", daysSinceLastSession);
+        public static void SessionEnded(int durationSeconds, int levelsPlayed, string screen) => Record("session_end",
+            "duration_s", durationSeconds, "levels_played", levelsPlayed, "screen", screen ?? "");
         public static void LevelStarted(int level, int attempt) => Record("level_start", "level_number", level, "attempt_number", attempt);
         public static void LevelCompleted(int level, int attempt, int movesRemaining) => Record("level_complete",
             "level_number", level, "attempt_number", attempt, "moves_remaining", movesRemaining);

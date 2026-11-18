@@ -16,35 +16,25 @@ namespace CloudServices
     public static class AnalyticsSink
     {
         private const int MaxBufferedEvents = 200;
-        private const string SessionNumberKey = "cityblocks_analytics_session_number";
+        private const string AccountKindKey = "account_kind";
 
-        private static readonly Queue<CustomEvent> Pending = new Queue<CustomEvent>();
+        private struct PendingEvent
+        {
+            public string Name;
+            public Dictionary<string, object> Parameters;
+        }
+
+        private static readonly Queue<PendingEvent> Pending = new Queue<PendingEvent>();
         private static bool collectionStarted;
-        private static int sessionNumber;
 
         // Session IDs: UGS stamps its standard `sessionID` on every event, so no custom session_id parameter is sent.
-
-        /// <summary>Launch counter persisted in PlayerPrefs. Step 6 (SessionTracker) replaces this with resume-aware sessions.</summary>
-        public static int SessionNumber
-        {
-            get
-            {
-                if (sessionNumber == 0)
-                {
-                    sessionNumber = PlayerPrefs.GetInt(SessionNumberKey, 0) + 1;
-                    PlayerPrefs.SetInt(SessionNumberKey, sessionNumber);
-                    PlayerPrefs.Save();
-                }
-                return sessionNumber;
-            }
-        }
+        // session_number comes from SessionTracker.
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
             Pending.Clear();
             collectionStarted = false;
-            sessionNumber = 0;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -57,22 +47,21 @@ namespace CloudServices
         public static void Record(string eventName, IDictionary<string, object> parameters)
         {
             if (string.IsNullOrEmpty(eventName)) return;
-            CustomEvent customEvent = new CustomEvent(eventName);
-            if (parameters != null)
+            PendingEvent pendingEvent = new PendingEvent
             {
-                foreach (KeyValuePair<string, object> parameter in parameters)
-                    AddParameter(customEvent, parameter.Key, parameter.Value);
-            }
+                Name = eventName,
+                Parameters = parameters != null ? new Dictionary<string, object>(parameters) : new Dictionary<string, object>()
+            };
 
             if (!collectionStarted) TryStartCollection();
             if (collectionStarted)
             {
-                Send(customEvent);
+                Send(pendingEvent);
                 return;
             }
 
             if (Pending.Count >= MaxBufferedEvents) Pending.Dequeue();
-            Pending.Enqueue(customEvent);
+            Pending.Enqueue(pendingEvent);
         }
 
         private static void TryStartCollection()
@@ -94,8 +83,17 @@ namespace CloudServices
             while (Pending.Count > 0) Send(Pending.Dequeue());
         }
 
-        private static void Send(CustomEvent customEvent)
+        private static void Send(PendingEvent pendingEvent)
         {
+            // account_kind describes the account the event is uploaded under, so it is resolved now rather than when
+            // the event was recorded (events buffered before sign-in would otherwise say "signed_out").
+            if (pendingEvent.Parameters.ContainsKey(AccountKindKey))
+                pendingEvent.Parameters[AccountKindKey] = CloudBootstrap.AccountKind;
+
+            CustomEvent customEvent = new CustomEvent(pendingEvent.Name);
+            foreach (KeyValuePair<string, object> parameter in pendingEvent.Parameters)
+                AddParameter(customEvent, parameter.Key, parameter.Value);
+
             try { AnalyticsService.Instance.RecordEvent(customEvent); }
             catch (Exception exception) { Debug.LogWarning("[AnalyticsSink] RecordEvent failed: " + exception.Message); }
         }
