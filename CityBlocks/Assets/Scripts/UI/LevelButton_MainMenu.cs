@@ -26,7 +26,8 @@ namespace UI
             if (!progress.levelTutorialComplete && progress.completedLevels.Count == 0)
             {
                 int firstLevel = progress.activeRun != null ? progress.activeRun.levelNumber : 1;
-                LevelFlow.StartLevel(firstLevel);
+                if (LevelFlow.StartLevel(firstLevel))
+                    LevelAnalytics.LevelSelected(firstLevel, progress.highestUnlockedLevel, "auto_first_launch");
                 return;
             }
             else if (!progress.levelTutorialComplete && progress.completedLevels.Contains(1))
@@ -101,7 +102,8 @@ namespace UI
         {
             LevelProgressData progress = LevelProgressStore.Load();
             int target = GetLatestUnlockedLevel(progress);
-            LevelFlow.StartLevel(target);
+            if (LevelFlow.StartLevel(target))
+                LevelAnalytics.LevelSelected(target, progress.highestUnlockedLevel, "level_button");
         }
     }
 }

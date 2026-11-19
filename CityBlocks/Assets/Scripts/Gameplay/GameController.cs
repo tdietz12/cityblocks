@@ -78,6 +78,20 @@ namespace Gameplay
         public int recordScore;
         public int recordLevel;
 
+        // Endless record as it stood when the current run started (recordScore/recordLevel update live during play).
+        private int _endlessRecordScoreAtStart;
+        private int _endlessRecordLevelAtStart;
+        private bool _endlessRecordReported;
+
+        /// <summary>Sends endless_new_record once per Endless run if this run beat the record it started with.</summary>
+        public void ReportEndlessRecordIfBeaten()
+        {
+            if (_endlessRecordReported || levelDefinition != null || LevelFlow.ActiveSession != null) return;
+            if (score <= _endlessRecordScoreAtStart && level <= _endlessRecordLevelAtStart) return;
+            _endlessRecordReported = true;
+            LevelAnalytics.EndlessNewRecord(score, level, _endlessRecordScoreAtStart, _endlessRecordLevelAtStart, EndlessAttemptNumber);
+        }
+
         public int QueueIndex => queueIndex;
         public bool QueueReady => queue != null && queue.towerQueue.Count >= 2;
         public bool IsResolvingMove => moveResolving;
@@ -182,6 +196,9 @@ namespace Gameplay
                 EndlessAttemptNumber = PlayerPrefs.GetInt("cityblocks_endless_attempt", 0) + 1;
                 PlayerPrefs.SetInt("cityblocks_endless_attempt", EndlessAttemptNumber);
                 PlayerPrefs.Save();
+                _endlessRecordScoreAtStart = recordScore;
+                _endlessRecordLevelAtStart = recordLevel;
+                _endlessRecordReported = false;
                 LevelAnalytics.EndlessStarted(EndlessAttemptNumber);
 
                 // Save whenever the player enters endless mode
@@ -926,6 +943,7 @@ namespace Gameplay
                     {
                         endlessFinished = true;
                         LevelAnalytics.EndlessFailed(level, EndlessAttemptNumber, TotalMoves);
+                        ReportEndlessRecordIfBeaten();
                     }
 
                     if (DataPersistenceController.instance != null)

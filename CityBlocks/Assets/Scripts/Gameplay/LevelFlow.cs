@@ -54,6 +54,7 @@ namespace Gameplay
                 if (game != null && game.state != GameController.GameState.lose && game.state != GameController.GameState.win)
                 {
                     LevelAnalytics.EndlessQuit(game.level, game.EndlessAttemptNumber, game.TotalMoves);
+                    game.ReportEndlessRecordIfBeaten();
                     if (DataPersistenceController.instance != null)
                     {
                         DataPersistenceController.instance.SaveGame();

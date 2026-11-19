@@ -39,7 +39,9 @@ namespace UI
 
         public void ButtonPress()
         {
-            if (!LevelProgressStore.Load().completedLevels.Contains(endlessUnlockLevel)) return;
+            LevelProgressData progress = LevelProgressStore.Load();
+            if (!progress.completedLevels.Contains(endlessUnlockLevel)) return;
+            LevelAnalytics.LevelSelected(0, progress.highestUnlockedLevel, "endless_button");
             SceneManager.LoadScene("EndlessMode");
         }
     }

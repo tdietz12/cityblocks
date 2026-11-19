@@ -9,6 +9,10 @@ namespace Gameplay
     {
         public int levelNumber;
         public int attemptNumber;
+        /// <summary>Unique id for this attempt; joins all of an attempt's analytics events.</summary>
+        public string attemptId;
+        /// <summary>Extra-move continues used in this attempt (survives relaunch).</summary>
+        public int continuesUsed;
         public int score;
         public int highestTowerLevel;
         public int movesRemaining;

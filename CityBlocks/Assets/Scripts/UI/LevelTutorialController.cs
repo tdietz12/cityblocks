@@ -22,6 +22,7 @@ namespace UI
         private GameObject currentStepInstance;
         private TutorialStep currentStepComponent;
         private bool isTutorialActive = false;
+        private float tutorialStartTime;
 
         public bool IsTutorialActive => isTutorialActive;
         public int CurrentStepIndex => currentStepIndex;
@@ -48,6 +49,7 @@ namespace UI
 
             isTutorialActive = true;
             currentStepIndex = 0;
+            tutorialStartTime = Time.realtimeSinceStartup;
 
             if (game != null)
             {
@@ -92,6 +94,8 @@ namespace UI
                 AdvanceStep();
                 return;
             }
+
+            LevelAnalytics.TutorialStepShown(session.Definition.levelNumber, index, stepPrefab.name);
 
             Transform parent = stepContainer != null ? stepContainer : transform;
             currentStepInstance = Instantiate(stepPrefab, parent);
@@ -149,6 +153,12 @@ namespace UI
 
         public void CompleteTutorial()
         {
+            if (isTutorialActive && session != null && session.Definition != null)
+            {
+                int stepsTotal = session.Definition.tutorialSteps != null ? session.Definition.tutorialSteps.Count : 0;
+                LevelAnalytics.TutorialCompleted(session.Definition.levelNumber, stepsTotal,
+                    Mathf.RoundToInt(Time.realtimeSinceStartup - tutorialStartTime));
+            }
             isTutorialActive = false;
 
             if (currentStepInstance != null)

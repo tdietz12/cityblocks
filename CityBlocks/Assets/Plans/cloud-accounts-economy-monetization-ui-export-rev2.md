@@ -399,7 +399,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Background the app for more than 5 min and come back → a second `session_start` with `session_number` + 1; the first ever launch has `is_first_launch=1`.
 - **Depends on:** 4
 
-#### Step 7 — Level lifecycle completeness (start / win / lose / restart / quit / resume) · M
+#### Step 7 — Level lifecycle completeness (start / win / lose / restart / quit / resume) · M · ✅ code done (update level_* schemas + register level_resume/level_restart in Event Manager)
 - **Files:** `LevelProgressData.cs` (`LevelRunData.attemptId`, `LevelRunData.continuesUsed`), `LevelSession.cs`, `LevelAnalytics.cs`.
 - **Behavior:**
   - `Initialize`: a new run gets a GUID `attemptId`; a resumed saved run fires `level_resume` instead of a second `level_start` (today a resume double-counts starts).
@@ -409,7 +409,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Play → restart mid-level → fail → retry → win: the event log (EventRecorded hook / Console) shows `start, restart(playing), start, fail, restart(fail), start, complete`, all with the right `attempt_id`s; killing and relaunching mid-level shows `level_resume`.
 - **Depends on:** 4
 
-#### Step 8 — Menu & tutorial funnel + Endless records · M
+#### Step 8 — Menu & tutorial funnel + Endless records · M · ✅ code done (register level_select, tutorial_step, tutorial_complete, endless_new_record)
 - **Files:** `PlayButton_MainMenu.cs`, `LevelButton_MainMenu.cs` (`level_select`), `LevelTutorialController.cs` / `TutorialStep.cs` (`tutorial_step`, `tutorial_complete`), `GameController.cs` (Endless fail at ~line 922 → `endless_new_record` when `ProgressionData.recordScore`/`recordLevel` is beaten), `LevelAnalytics.cs`.
 - **🔍 Checkpoint:** On a fresh install, finishing the tutorial logs every step in order followed by `tutorial_complete`; beating the Endless record logs `endless_new_record` once per run.
 - **Depends on:** 4

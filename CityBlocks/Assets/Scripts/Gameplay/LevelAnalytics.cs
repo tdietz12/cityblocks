@@ -44,12 +44,31 @@ namespace Gameplay
             "is_first_launch", isFirstLaunch ? 1 : 0, "days_since_install", daysSinceInstall, "days_since_last_session", daysSinceLastSession);
         public static void SessionEnded(int durationSeconds, int levelsPlayed, string screen) => Record("session_end",
             "duration_s", durationSeconds, "levels_played", levelsPlayed, "screen", screen ?? "");
-        public static void LevelStarted(int level, int attempt) => Record("level_start", "level_number", level, "attempt_number", attempt);
-        public static void LevelCompleted(int level, int attempt, int movesRemaining) => Record("level_complete",
-            "level_number", level, "attempt_number", attempt, "moves_remaining", movesRemaining);
-        public static void LevelFailed(int level, int attempt, string objective) => Record("level_fail",
-            "level_number", level, "attempt_number", attempt, "failed_objective", objective ?? "unknown");
-        public static void LevelQuit(int level, int attempt) => Record("level_quit", "level_number", level, "attempt_number", attempt);
+        public static void LevelStarted(int level, int attempt, string attemptId) => Record("level_start",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "");
+        public static void LevelResumed(int level, int attempt, string attemptId, int movesRemaining) => Record("level_resume",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "moves_remaining", movesRemaining);
+        public static void LevelCompleted(int level, int attempt, string attemptId, int movesRemaining, int score, int continuesUsed) => Record("level_complete",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "moves_remaining", movesRemaining,
+            "score", score, "continues_used", continuesUsed);
+        public static void LevelFailed(int level, int attempt, string attemptId, string objective, int score, int continuesUsed) => Record("level_fail",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "failed_objective", objective ?? "unknown",
+            "score", score, "continues_used", continuesUsed);
+        /// <summary>fromState: "playing" (restart mid-level), "fail" (Retry on the loss screen) or "win" (replay after winning).</summary>
+        public static void LevelRestarted(int level, int attempt, string attemptId, string fromState) => Record("level_restart",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "from_state", fromState ?? "playing");
+        public static void LevelQuit(int level, int attempt, string attemptId, int movesRemaining) => Record("level_quit",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "moves_remaining", movesRemaining);
+        /// <summary>source: level_button, endless_button or auto_first_launch. level_number is 0 for Endless.</summary>
+        public static void LevelSelected(int level, int highestUnlocked, string source) => Record("level_select",
+            "level_number", level, "highest_unlocked", highestUnlocked, "source", source ?? "");
+        public static void TutorialStepShown(int level, int stepIndex, string stepId) => Record("tutorial_step",
+            "level_number", level, "step_index", stepIndex, "step_id", stepId ?? "");
+        public static void TutorialCompleted(int level, int stepsTotal, int durationSeconds) => Record("tutorial_complete",
+            "level_number", level, "steps_total", stepsTotal, "duration_s", durationSeconds);
+        public static void EndlessNewRecord(int score, int levelReached, int previousRecordScore, int previousRecordLevel, int attempt) =>
+            Record("endless_new_record", "score", score, "level_reached", levelReached,
+                "previous_record_score", previousRecordScore, "previous_record_level", previousRecordLevel, "attempt_number", attempt);
         public static void EndlessStarted(int attempt) => Record("endless_level_start", "attempt_number", attempt);
         public static void EndlessFailed(int level, int attempt, int totalMoves) => Record("endless_level_fail",
             "level_reached", level, "attempt_number", attempt, "total_moves", totalMoves);

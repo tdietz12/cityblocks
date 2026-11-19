@@ -11,6 +11,9 @@ namespace Gameplay
         public LevelProgressData Progress { get; private set; }
         public int MovesRemaining { get; private set; }
         public int AttemptNumber { get; private set; }
+        /// <summary>Unique id of the current attempt (stable across app relaunch while the run is resumed).</summary>
+        public string AttemptId { get; private set; }
+        public int ContinuesUsed { get; private set; }
         private GameController game;
         private LevelRulesUI rulesUI;
         private bool finished;
@@ -37,6 +40,7 @@ namespace Gameplay
                 {
                     levelNumber = definition.levelNumber,
                     attemptNumber = Progress.BeginAttempt(definition.levelNumber),
+                    attemptId = System.Guid.NewGuid().ToString("N"),
                     movesRemaining = definition.moveLimit,
                     board = new List<Vector3>(),
                     obstacleStateInitialized = true,
@@ -61,7 +65,15 @@ namespace Gameplay
                 run.attemptNumber = Progress.BeginAttempt(definition.levelNumber);
                 LevelProgressStore.Save(Progress);
             }
+            if (string.IsNullOrEmpty(run.attemptId))
+            {
+                // Runs saved before attempt ids existed get one on resume.
+                run.attemptId = System.Guid.NewGuid().ToString("N");
+                LevelProgressStore.Save(Progress);
+            }
             AttemptNumber = run.attemptNumber;
+            AttemptId = run.attemptId;
+            ContinuesUsed = run.continuesUsed;
 
             MovesRemaining = run.movesRemaining;
             game.grid.Configure(definition);
@@ -90,10 +102,12 @@ namespace Gameplay
             }
             game.grid.LoadObstacles(run.obstacles);
             BoardCameraFitter.Fit(Camera.main, definition.columns, definition.rows, game.grid.WorldOffset);
+            // Analytics before binding the HUD: binding can auto-start the tutorial, whose events should follow level_start.
+            if (resume) LevelAnalytics.LevelResumed(definition.levelNumber, AttemptNumber, AttemptId, MovesRemaining);
+            else LevelAnalytics.LevelStarted(definition.levelNumber, AttemptNumber, AttemptId);
             rulesUI = FindAnyObjectByType<LevelRulesUI>(FindObjectsInactive.Include);
             if (rulesUI != null) rulesUI.Bind(this, game);
             initialized = true;
-            LevelAnalytics.LevelStarted(definition.levelNumber, AttemptNumber);
         }
 
         public void RecordMove()
@@ -130,7 +144,10 @@ namespace Gameplay
 
         public void Retry()
         {
+            string fromState = awaitingFailureDecision ? "fail"
+                : game != null && game.state == GameController.GameState.win ? "win" : "playing";
             if (awaitingFailureDecision) FinalizeFailure();
+            if (Definition != null) LevelAnalytics.LevelRestarted(Definition.levelNumber, AttemptNumber, AttemptId, fromState);
             Progress.activeRun = null;
             LevelProgressStore.Save(Progress);
             finished = true;
@@ -142,6 +159,8 @@ namespace Gameplay
             if (!awaitingFailureDecision || finished || extraMoves <= 0) return false;
             Progress = LevelProgressStore.Load();
             MovesRemaining += extraMoves;
+            ContinuesUsed++;
+            if (Progress.activeRun != null) Progress.activeRun.continuesUsed = ContinuesUsed;
             awaitingFailureDecision = false;
             pendingFailedObjective = null;
             game.state = GameController.GameState.play;
@@ -163,7 +182,7 @@ namespace Gameplay
 
         public void Complete()
         {
-            LevelAnalytics.LevelCompleted(Definition.levelNumber, AttemptNumber, MovesRemaining);
+            LevelAnalytics.LevelCompleted(Definition.levelNumber, AttemptNumber, AttemptId, MovesRemaining, game.score, ContinuesUsed);
             LevelDefinition next = LevelCatalog.Next(Definition.levelNumber);
             Progress.Complete(Definition.levelNumber, next != null ? next.levelNumber : 0);
             LevelProgressStore.Save(Progress);
@@ -184,8 +203,9 @@ namespace Gameplay
         private void FinalizeFailure()
         {
             if (!awaitingFailureDecision || finished) return;
-            LevelAnalytics.LevelFailed(Definition.levelNumber, AttemptNumber,
-                string.IsNullOrEmpty(pendingFailedObjective) ? "unknown" : pendingFailedObjective);
+            LevelAnalytics.LevelFailed(Definition.levelNumber, AttemptNumber, AttemptId,
+                string.IsNullOrEmpty(pendingFailedObjective) ? "unknown" : pendingFailedObjective,
+                game != null ? game.score : 0, ContinuesUsed);
             awaitingFailureDecision = false;
             finished = true;
             Progress.activeRun = null;
@@ -217,7 +237,7 @@ namespace Gameplay
                 return;
             }
             if (!initialized || finished) return;
-            LevelAnalytics.LevelQuit(Definition.levelNumber, AttemptNumber);
+            LevelAnalytics.LevelQuit(Definition.levelNumber, AttemptNumber, AttemptId, MovesRemaining);
 
             // User requirement: if exiting from a level back to main menu, do not save progress in the level.
             if (Progress != null && Progress.activeRun != null)
