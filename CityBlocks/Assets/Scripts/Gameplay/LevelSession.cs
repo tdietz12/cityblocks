@@ -25,6 +25,26 @@ namespace Gameplay
         public bool AwaitingFailureDecision => awaitingFailureDecision;
         public string PendingFailedObjective => pendingFailedObjective;
 
+        // continue_index of the continue currently shown on the loss screen (0 = none shown).
+        private int offeredContinueIndex;
+
+        /// <summary>Called by the loss screen when it shows a continue option for the current failure.</summary>
+        public void NoteContinueOffered(int movesOffered)
+        {
+            if (!awaitingFailureDecision || finished || Definition == null) return;
+            int index = ContinuesUsed + 1;
+            if (offeredContinueIndex == index) return; // already reported for this failure
+            offeredContinueIndex = index;
+            LevelAnalytics.ContinueOffered(Definition.levelNumber, AttemptNumber, AttemptId, index, movesOffered);
+        }
+
+        private void ReportContinueDeclined(string choice)
+        {
+            if (!awaitingFailureDecision || offeredContinueIndex <= 0 || Definition == null) return;
+            LevelAnalytics.ContinueDeclined(Definition.levelNumber, AttemptNumber, AttemptId, offeredContinueIndex, choice);
+            offeredContinueIndex = 0;
+        }
+
         public void Initialize(LevelDefinition definition, GameController gameController)
         {
             if (definition == null) return;
@@ -146,6 +166,7 @@ namespace Gameplay
         {
             string fromState = awaitingFailureDecision ? "fail"
                 : game != null && game.state == GameController.GameState.win ? "win" : "playing";
+            ReportContinueDeclined("retry");
             if (awaitingFailureDecision) FinalizeFailure();
             if (Definition != null) LevelAnalytics.LevelRestarted(Definition.levelNumber, AttemptNumber, AttemptId, fromState);
             Progress.activeRun = null;
@@ -154,13 +175,16 @@ namespace Gameplay
             LevelFlow.StartLevel(Definition.levelNumber);
         }
 
-        public bool ContinueAfterExtraMoves(int extraMoves)
+        /// <param name="currency">How the continue was paid for: "iap" today; "coins" once coin continues exist.</param>
+        public bool ContinueAfterExtraMoves(int extraMoves, string currency = "iap")
         {
             if (!awaitingFailureDecision || finished || extraMoves <= 0) return false;
             Progress = LevelProgressStore.Load();
             MovesRemaining += extraMoves;
             ContinuesUsed++;
             if (Progress.activeRun != null) Progress.activeRun.continuesUsed = ContinuesUsed;
+            LevelAnalytics.ContinuePurchased(Definition.levelNumber, AttemptNumber, AttemptId, ContinuesUsed, currency, extraMoves);
+            offeredContinueIndex = 0;
             awaitingFailureDecision = false;
             pendingFailedObjective = null;
             game.state = GameController.GameState.play;
@@ -216,6 +240,7 @@ namespace Gameplay
         public void ReturnToMenu()
         {
             discardRunOnExit = true;
+            ReportContinueDeclined("menu");
             if (awaitingFailureDecision) FinalizeFailure();
             if (Progress != null && Progress.activeRun != null)
             {
@@ -233,6 +258,7 @@ namespace Gameplay
             discardRunOnExit = true;
             if (awaitingFailureDecision)
             {
+                ReportContinueDeclined("menu");
                 FinalizeFailure();
                 return;
             }

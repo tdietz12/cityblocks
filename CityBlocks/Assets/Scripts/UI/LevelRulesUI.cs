@@ -572,6 +572,7 @@ namespace UI
                                        extraMovesOffer.extraMovesOnPurchase > 0 &&
                                        !string.IsNullOrWhiteSpace(extraMovesOffer.productId);
                     buyExtraMovesButton.gameObject.SetActive(canBuyMoves);
+                    if (canBuyMoves) session.NoteContinueOffered(extraMovesOffer.extraMovesOnPurchase);
                 }
             }
             else

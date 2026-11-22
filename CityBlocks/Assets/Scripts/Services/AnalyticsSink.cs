@@ -80,11 +80,19 @@ namespace CloudServices
                 return;
             }
 
-            while (Pending.Count > 0) Send(Pending.Dequeue());
+            for (int remaining = Pending.Count; remaining > 0 && Pending.Count > 0; remaining--) Send(Pending.Dequeue());
         }
 
         private static void Send(PendingEvent pendingEvent)
         {
+            // Services can shut down before late events (e.g. session_end on quit / leaving Play Mode); keep them buffered.
+            if (UnityServices.State != ServicesInitializationState.Initialized)
+            {
+                if (Pending.Count >= MaxBufferedEvents) Pending.Dequeue();
+                Pending.Enqueue(pendingEvent);
+                return;
+            }
+
             // account_kind describes the account the event is uploaded under, so it is resolved now rather than when
             // the event was recorded (events buffered before sign-in would otherwise say "signed_out").
             if (pendingEvent.Parameters.ContainsKey(AccountKindKey))

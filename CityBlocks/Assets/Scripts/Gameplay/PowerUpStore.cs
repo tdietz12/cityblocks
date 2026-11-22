@@ -29,12 +29,26 @@ namespace Gameplay
         }
 
         /// <summary>Called only after the platform store confirms a non-consumable/bundle purchase.</summary>
-        public static void ConfirmBundlePurchase(string productId, PowerUpInventory uses)
+        public static void ConfirmBundlePurchase(string productId, PowerUpInventory uses, string source = "purchase")
         {
-            if (string.IsNullOrWhiteSpace(productId) || uses == null) return;
+            if (string.IsNullOrWhiteSpace(productId)) return;
+            Grant(uses, source);
+        }
+
+        /// <summary>Adds power-up uses to the inventory and reports powerup_granted for each type granted.</summary>
+        /// <param name="source">purchase, daily, welcome, migration…</param>
+        public static void Grant(PowerUpInventory uses, string source)
+        {
+            if (uses == null) return;
             LevelProgressData data = LoadProgress();
             data.powerUps.Add(uses);
             LevelProgressStore.Save(data);
+            foreach (GameController.PowerUpType type in new[] { GameController.PowerUpType.delete, GameController.PowerUpType.lookAhead,
+                                                                GameController.PowerUpType.levelUp, GameController.PowerUpType.extraTurns })
+            {
+                int amount = uses.Get(type);
+                if (amount > 0) LevelAnalytics.PowerUpGranted(type, amount, source, data.powerUps.Get(type));
+            }
         }
 
         /// <summary>Called only after the platform store confirms the no-ads product.</summary>

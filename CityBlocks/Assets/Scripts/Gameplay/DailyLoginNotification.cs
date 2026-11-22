@@ -107,8 +107,47 @@ namespace Gameplay
             }
         }
 
-    #if UNITY_ANDROID
-    private static void ScheduleAndroid()
+    /// <summary>Hours since the most recent 10:00 local reminder fired (the reminder's calendar trigger time).</summary>
+    internal static int HoursSinceLastReminder(DateTime nowLocal)
+    {
+        DateTime fire = nowLocal.Date.AddHours(10);
+        if (nowLocal < fire) fire = fire.AddDays(-1);
+        return Mathf.Max(0, (int)Math.Floor((nowLocal - fire).TotalHours));
+    }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void CreateOpenTracker()
+    {
+    #if UNITY_IOS && !UNITY_EDITOR
+        GameObject tracker = new GameObject("DailyLoginNotificationOpenTracker");
+        UnityEngine.Object.DontDestroyOnLoad(tracker);
+        tracker.AddComponent<NotificationOpenTracker>();
+    #endif
+    }
+
+#if UNITY_IOS && !UNITY_EDITOR
+    /// <summary>
+    /// Checks once per cold start whether the app was launched by tapping a notification.
+    /// (Taps that resume an app still alive in the background are not counted.)
+    /// </summary>
+    private sealed class NotificationOpenTracker : MonoBehaviour
+    {
+        private IEnumerator Start()
+        {
+            QueryLastRespondedNotificationOp query = iOSNotificationCenter.QueryLastRespondedNotification();
+            yield return query;
+            if (query.State == QueryLastRespondedNotificationState.HaveRespondedNotification && query.Notification != null)
+            {
+                string id = query.Notification.Identifier;
+                LevelAnalytics.NotificationOpened(id, id == NotificationId ? HoursSinceLastReminder(DateTime.Now) : -1);
+            }
+            Destroy(gameObject);
+        }
+    }
+#endif
+
+#if UNITY_ANDROID
+private static void ScheduleAndroid()
     {
         AndroidNotificationCenter.CancelNotification(AndroidNotificationId);
         DateTime fireTime = DateTime.Now.Date.AddDays(1).AddHours(10);

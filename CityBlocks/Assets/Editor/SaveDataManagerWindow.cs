@@ -234,7 +234,71 @@ namespace EditorTools
             return data;
         }
 
-        public static void RefreshActiveUI()
+        private const string MainMenuScenePath = "Assets/Scenes/MainMenu.unity";
+        private const string ForceDailyModalOnPlayKey = "CityBlocks.Debug.ForceDailyModalOnPlay";
+
+        /// <summary>
+        /// Prepares a daily reward test. Makes today's reward claimable (next streak day if already claimed today).
+        /// In Edit Mode it opens MainMenu and arms the modal so it shows when you press Play yourself (even for a
+        /// brand-new tutorial player); it does not enter Play Mode. In Play Mode the modal reopens immediately.
+        /// Returns the streak day that will be shown.
+        /// </summary>
+        public static int PrepareDailyLoginReward()
+        {
+            DailyLoginStreakService.DebugMakeClaimableToday();
+            int day = DailyLoginStreakService.CurrentStreakDay;
+
+            if (Application.isPlaying)
+            {
+                if (!ForceOpenDailyModal())
+                    Debug.LogWarning("[SaveDataEditorMenu] No DailyLoginRewards modal in the open scene. Go to the main menu and press the button again.");
+                Debug.Log($"[SaveDataEditorMenu] Showing daily login reward as Day {day}.");
+                return day;
+            }
+
+            if (!UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return day;
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().path != MainMenuScenePath)
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(MainMenuScenePath);
+            SessionState.SetBool(ForceDailyModalOnPlayKey, true);
+
+            Debug.Log($"[SaveDataEditorMenu] Daily login reward prepared as Day {day}. Press Play to see it.");
+            return day;
+        }
+
+        /// <summary>True when a prepared daily reward is waiting for the next Play.</summary>
+        public static bool DailyRewardPrepared => SessionState.GetBool(ForceDailyModalOnPlayKey, false);
+
+        /// <summary>Clears the daily login streak: next claim is Day 1. Progress, power-ups and PlayerPrefs are kept.</summary>
+        public static void ResetDailyStreak()
+        {
+            DailyLoginStreakService.DebugReset();
+            Debug.Log("[SaveDataEditorMenu] Daily login streak reset. Next claim is Day 1.");
+        }
+
+        private static bool ForceOpenDailyModal()
+        {
+            bool opened = false;
+            foreach (var ui in UnityEngine.Object.FindObjectsByType<DailyLoginStreakUI>(FindObjectsInactive.Include))
+                if (ui != null && ui.gameObject.scene.IsValid() && ui.DebugForceOpen()) opened = true;
+            return opened;
+        }
+
+        [InitializeOnLoadMethod]
+        private static void RegisterPlayModeHook()
+        {
+            EditorApplication.playModeStateChanged += state =>
+            {
+                if (state != PlayModeStateChange.EnteredPlayMode || !SessionState.GetBool(ForceDailyModalOnPlayKey, false)) return;
+                SessionState.EraseBool(ForceDailyModalOnPlayKey);
+                // Wait a frame so the scene's Start() has run; if it already opened the modal (reward claimed), nothing more to do.
+                EditorApplication.delayCall += () =>
+                {
+                    if (Application.isPlaying && DailyLoginStreakService.CanClaim) ForceOpenDailyModal();
+                };
+            };
+        }
+
+public static void RefreshActiveUI()
         {
             if (!Application.isPlaying) return;
 
@@ -266,6 +330,7 @@ namespace EditorTools
         private bool resetPowerUps = false;
         private bool clearEndlessSave = true;
         private bool clearPlayerPrefsAndStreaks = false;
+        private int claimableDay = 2;
 
         private string statusMessage = "";
         private MessageType statusMessageType = MessageType.Info;
@@ -309,6 +374,11 @@ namespace EditorTools
 
             // Current Player State Box
             DrawCurrentStateBox();
+
+            EditorGUILayout.Space(10);
+
+            // Daily Login Streak Box
+            DrawDailyStreakBox();
 
             EditorGUILayout.Space(10);
 
@@ -457,6 +527,62 @@ namespace EditorTools
             EditorGUILayout.Space(2);
             EditorGUILayout.LabelField($"Power-Ups:  Del: {data.powerUps.deleteUses} | Look: {data.powerUps.deleteRowUses} | LvlUp: {data.powerUps.levelUpUses} | Extra: {data.powerUps.extraTurnsUses}", EditorStyles.miniLabel);
 
+            EditorGUILayout.EndVertical();
+        }
+
+        private void OnInspectorUpdate()
+        {
+            // Keep the streak status live while the game claims rewards in Play Mode.
+            if (Application.isPlaying) Repaint();
+        }
+
+        private void DrawDailyStreakBox()
+        {
+            EditorGUILayout.BeginVertical("box");
+            EditorGUILayout.LabelField("Daily Login Reward", EditorStyles.boldLabel);
+            EditorGUILayout.Space(3);
+
+            DateTime? lastClaim = DailyLoginStreakService.DebugLastClaimDate;
+            string streakText = lastClaim.HasValue
+                ? $"Day {DailyLoginStreakService.DebugStoredStreakDay} (last claimed {lastClaim.Value:yyyy-MM-dd})"
+                : "Never claimed";
+            EditorGUILayout.LabelField("Streak:", streakText);
+
+            int nextDay = DailyLoginStreakService.CanClaim
+                ? DailyLoginStreakService.CurrentStreakDay
+                : DailyLoginStreakService.DebugNextDayAfterToday;
+            string nextReward = DailyLoginStreakUI.Describe(DailyLoginStreakService.RewardForDay(nextDay), DailyLoginStreakService.CoinsForDay(nextDay));
+            EditorGUILayout.LabelField("Next Test Shows:", $"Day {nextDay} (+{nextReward})");
+
+            EditorGUILayout.Space(6);
+            GUI.backgroundColor = new Color(0.4f, 0.85f, 0.4f);
+            if (GUILayout.Button(new GUIContent("Prepare Daily Login Reward",
+                    "Makes today's reward claimable (next streak day if already claimed today). " +
+                    "In Edit Mode this opens MainMenu but does NOT enter Play Mode: press Play yourself and the modal shows. " +
+                    "In Play Mode the modal reopens immediately."),
+                    GUILayout.Height(32)))
+            {
+                int day = SaveDataEditorMenu.PrepareDailyLoginReward();
+                statusMessage = Application.isPlaying
+                    ? $"Daily reward: showing Day {day}. Press again to advance to the next day."
+                    : $"Daily reward prepared: Day {day}. Press Play to see it.";
+                statusMessageType = MessageType.Info;
+                GUIUtility.ExitGUI();
+            }
+            GUI.backgroundColor = Color.white;
+
+            if (!Application.isPlaying && SaveDataEditorMenu.DailyRewardPrepared)
+                EditorGUILayout.HelpBox("Prepared — the daily reward will show when you press Play.", MessageType.None);
+
+            if (GUILayout.Button(new GUIContent("Reset Streak",
+                    "Clears the daily login streak so the next test is Day 1. Level progress, power-ups and PlayerPrefs are kept."),
+                    GUILayout.Height(24)))
+            {
+                SaveDataEditorMenu.ResetDailyStreak();
+                statusMessage = "Daily login streak reset. Next test shows Day 1.";
+                statusMessageType = MessageType.Info;
+                Repaint();
+            }
             EditorGUILayout.EndVertical();
         }
 

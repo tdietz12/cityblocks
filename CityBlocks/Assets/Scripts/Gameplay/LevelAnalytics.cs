@@ -69,13 +69,40 @@ namespace Gameplay
         public static void EndlessNewRecord(int score, int levelReached, int previousRecordScore, int previousRecordLevel, int attempt) =>
             Record("endless_new_record", "score", score, "level_reached", levelReached,
                 "previous_record_score", previousRecordScore, "previous_record_level", previousRecordLevel, "attempt_number", attempt);
+        public static void DailyRewardClaimed(int streakDay, int rewardAmount) => Record("daily_reward_claimed",
+            "streak_day", streakDay, "reward_amount", rewardAmount);
+        /// <summary>Sent when the automatic daily reward popup is dismissed. dismissMethod: "collect" or "close".</summary>
+        public static void DailyRewardPopupShown(int streakDay, string dismissMethod, int durationSeconds) => Record("daily_reward_popup_shown",
+            "streak_day", streakDay, "dismiss_method", dismissMethod ?? "", "duration_s", durationSeconds);
+        /// <summary>The player came back after missing at least one day, resetting a streak of previousStreak days.</summary>
+        public static void DailyStreakBroken(int previousStreak, int daysMissed) => Record("daily_streak_broken",
+            "previous_streak", previousStreak, "days_missed", daysMissed);
+        /// <summary>The app was cold-started by tapping a local notification.</summary>
+        public static void NotificationOpened(string notificationId, int hoursSinceFire) => Record("notification_opened",
+            "notification_id", notificationId ?? "", "hours_since_fire", hoursSinceFire);
         public static void EndlessStarted(int attempt) => Record("endless_level_start", "attempt_number", attempt);
         public static void EndlessFailed(int level, int attempt, int totalMoves) => Record("endless_level_fail",
             "level_reached", level, "attempt_number", attempt, "total_moves", totalMoves);
         public static void EndlessQuit(int level, int attempt, int totalMoves) => Record("endless_level_quit",
             "level_reached", level, "attempt_number", attempt, "total_moves", totalMoves);
-        public static void BoosterUsed(string boosterId, int level, int attempt, bool endless) => Record("booster_used",
-            "booster_id", boosterId, "level_number", level, "attempt_number", attempt, "is_endless_level", endless ? 1 : 0);
+        /// <summary>Analytics id for a power-up; shared by booster_used and powerup_granted.</summary>
+        public static string BoosterId(GameController.PowerUpType type) => type == GameController.PowerUpType.lookAhead ? "look_ahead" : type.ToString();
+
+        public static void BoosterUsed(string boosterId, int level, int attempt, bool endless, string attemptId, int balanceAfter) => Record("booster_used",
+            "booster_id", boosterId, "level_number", level, "attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
+            "attempt_id", attemptId ?? "", "balance_after", balanceAfter);
+        public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
+            "booster_id", BoosterId(type), "amount", amount, "source", source ?? "", "balance_after", balanceAfter);
+        /// <summary>A continue (extra moves) was shown on the loss screen. continueIndex: 1 = first continue in this attempt.</summary>
+        public static void ContinueOffered(int level, int attempt, string attemptId, int continueIndex, int movesOffered) => Record("continue_offered",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "continue_index", continueIndex, "moves_offered", movesOffered);
+        /// <summary>currency: "iap" today; "coins" from Step 43.</summary>
+        public static void ContinuePurchased(int level, int attempt, string attemptId, int continueIndex, string currency, int movesGranted) => Record("continue_purchased",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "continue_index", continueIndex,
+            "currency", currency ?? "", "moves_granted", movesGranted);
+        /// <summary>choice: "retry" or "menu".</summary>
+        public static void ContinueDeclined(int level, int attempt, string attemptId, int continueIndex, string choice) => Record("continue_declined",
+            "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "continue_index", continueIndex, "choice", choice ?? "");
         public static void InsufficientFunds(string currency, double shortfall, string item, string levelName) => Record("insufficient_funds",
             "currency", currency ?? "", "shortfall", shortfall, "item_name", item ?? "", "level_name", levelName ?? "");
         public static void StoreOpened(string entryPoint, string levelName) => Record("store_open", "entry_point", entryPoint ?? "", "level_name", levelName ?? "");

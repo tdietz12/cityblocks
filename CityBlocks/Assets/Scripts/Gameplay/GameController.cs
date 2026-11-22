@@ -962,11 +962,13 @@ namespace Gameplay
 
         private void RecordBoosterUse()
         {
-            string id = powerUp == PowerUpType.lookAhead ? "look_ahead" : powerUp.ToString();
+            string id = LevelAnalytics.BoosterId(powerUp);
             bool endless = LevelFlow.ActiveSession == null;
             int currentLevel = endless ? level : LevelFlow.ActiveSession.Definition.levelNumber;
             int attempt = endless ? EndlessAttemptNumber : LevelFlow.ActiveSession.AttemptNumber;
-            LevelAnalytics.BoosterUsed(id, currentLevel, attempt, endless);
+            string attemptId = endless ? "" : LevelFlow.ActiveSession.AttemptId;
+            // Called right after PowerUpStore.TryUse, so this is the balance after the use.
+            LevelAnalytics.BoosterUsed(id, currentLevel, attempt, endless, attemptId, PowerUpStore.Uses(powerUp));
         }
     }
 }

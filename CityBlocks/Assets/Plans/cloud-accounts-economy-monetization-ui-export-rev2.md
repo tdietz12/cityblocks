@@ -414,12 +414,12 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** On a fresh install, finishing the tutorial logs every step in order followed by `tutorial_complete`; beating the Endless record logs `endless_new_record` once per run.
 - **Depends on:** 4
 
-#### Step 9 — Power-up & continue flow (today's inventory and Extra Moves offer) · M
+#### Step 9 — Power-up & continue flow (today's inventory and Extra Moves offer) · M · ✅ code done (`insufficient_funds` moved to Step 43: power-up buttons are disabled at 0 uses, so a 0-use tap can't happen until the 'not enough → Store' UI exists)
 - **Files:** `GameController.cs` (`booster_used` + `attempt_id`, `balance_after`; `insufficient_funds` when a power-up has 0 uses), `LevelRulesUI.cs` (`continue_offered` in `ShowLoss`, `continue_declined` on Retry / Main Menu with `choice`), `PowerUpStore.cs` (`continue_purchased` with `currency=iap` after the Extra Moves offer is fulfilled; `powerup_granted` in `ConfirmBundlePurchase`), `LevelAnalytics.cs`.
 - **🔍 Checkpoint:** Fail a level → `continue_offered`; choose Retry → `continue_declined(choice=retry)`; use each power-up → `booster_used` with the right `balance_after`; tapping a power-up with 0 uses → `insufficient_funds`.
 - **Depends on:** 7
 
-#### Step 10 — Daily & re-engagement · S
+#### Step 10 — Daily & re-engagement · S · ✅ code done (notification_opened counts cold starts from a reminder tap; register daily_streak_broken, notification_opened, add reward_amount to daily_reward_claimed)
 - **Files:** `DailyLoginStreakService.cs` (move its raw `Record` call to a typed `DailyRewardClaimed`; add `daily_streak_broken` with previous streak and days missed), `DailyLoginNotification.cs` (`notification_opened` via `iOSNotificationCenter.GetLastRespondedNotification()` on launch), `LevelAnalytics.cs`.
 - **🔍 Checkpoint:** Opening the app from the daily notification logs `notification_opened`; skipping a day (simulated in the Editor by moving the stored last-claim date) logs `daily_streak_broken`.
 - **Depends on:** 4
@@ -620,7 +620,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **Depends on:** 22
 
 #### Step 43 — Coin continue on the fail screen · M
-- **Files:** `LevelRulesUI.cs` (`ShowLoss`, continue button, "not enough coins → Store", offline banner), `LevelLossPanel` in `LevelRulesUI.prefab`, `LevelSession.cs`, `LevelAnalytics.cs` (the `continue_*` events from Step 9 gain `coin_cost`, `coins_balance`, `currency=coins`; `coins_spent(sink=continue)`).
+- **Files:** `LevelRulesUI.cs` (`ShowLoss`, continue button, "not enough coins → Store", offline banner; also wire `insufficient_funds` here and for 0-use power-up taps, moved from Step 9), `LevelLossPanel` in `LevelRulesUI.prefab`, `LevelSession.cs`, `LevelAnalytics.cs` (the `continue_*` events from Step 9 gain `coin_cost`, `coins_balance`, `currency=coins`; `coins_spent(sink=continue)`).
 - **🔍 Checkpoint:** Costs go 900 → 1,500 → 2,500 within one attempt; the same board continues; events logged; offline shows the banner.
 - **Depends on:** 26, 42
 
@@ -643,6 +643,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 #### Step 46 — Analytics consent toggle · S
 - **Files:** `AnalyticsSink.cs`, `AccountSettingsPanel.cs`.
+- **Note (found in Step 10):** iOS player builds define `ENABLE_UNITY_CONSENT`, where `StartDataCollection()` is obsolete and **throws if anything has set `EndUserConsent`** (nothing does today, so it works). Switch `AnalyticsSink` to `EndUserConsent.SetConsentState` (AnalyticsIntent only, preserving AdsIntent) under `#if ENABLE_UNITY_CONSENT`, keeping `StartDataCollection` for the Editor.
 - **🔍 Checkpoint:** Turning it off stops data collection; the setting persists across launches.
 - **Depends on:** 11, 17
 
@@ -753,7 +754,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ## Risks / open items to confirm during implementation
 - **StoreKit 2 receipt ↔ Economy Apple redemption compatibility** (Step 35 spike; Cloud Code JWS fallback ready).
-- **UGS Analytics consent API** for the installed Analytics version (`StartDataCollection()` vs. the newer end-user-consent API) — confirmed in Step 4.
+- **UGS Analytics consent API:** Editor uses `StartDataCollection()`; iOS builds define `ENABLE_UNITY_CONSENT` (obsolete warning, works while no SDK sets `EndUserConsent`). Migrate in Step 46.
 - Exact Economy/Analytics package versions compatible with Unity 6000.4.5f1.
 - Apple plugin build (Apple's unityplugins require building tarballs on macOS with Xcode).
 - UGS Analytics consent requirements per region (GDPR/PIPL) — consent prompt behavior to be confirmed with legal.
