@@ -19,6 +19,14 @@ namespace Gameplay
         private bool showWhenLoaded;
         private Action afterAdAction;
 
+        // Impression tracking for the built-in adImpression event (sent once when the shown ad closes).
+        private const string PlacementAfterWin = "after_win";
+        private const string PlacementReturnToMenu = "return_to_menu";
+        private string placementName = PlacementAfterWin;
+        private bool impressionOpen;
+        private bool impressionClicked;
+        private float impressionStartedAt;
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
         private static void CreateProvider()
         {
@@ -93,6 +101,7 @@ namespace Gameplay
         private void ShowInterstitial(int levelNumber)
         {
             requestedLevel = levelNumber;
+            placementName = PlacementAfterWin;
             if (!initialized || string.IsNullOrWhiteSpace(interstitialAdUnitId)) return;
             if (adLoaded)
             {
@@ -149,6 +158,7 @@ namespace Gameplay
         public void OnUnityAdsShowFailure(string adUnitId, UnityAdsShowError error, string message)
         {
             adLoaded = false;
+            ReportImpression(adUnitId, "incomplete");
             LevelAnalytics.AdLoadFailed("interstitial", "show:" + error + ":" + message);
             Debug.LogWarning("Unity Ads failed to show "+ adUnitId + ": " + error + " - " + message);
             CompleteDeferredAction();
@@ -157,16 +167,38 @@ namespace Gameplay
 
         public void OnUnityAdsShowStart(string adUnitId)
         {
-            bool endless = LevelFlow.ActiveSession == null;
-            LevelAnalytics.AdImpression("unity_ads", "interstitial", requestedLevel, endless);
+            impressionOpen = true;
+            impressionClicked = false;
+            impressionStartedAt = Time.realtimeSinceStartup;
         }
 
-        public void OnUnityAdsShowClick(string adUnitId) { }
+        public void OnUnityAdsShowClick(string adUnitId)
+        {
+            impressionClicked = true;
+        }
 
         public void OnUnityAdsShowComplete(string adUnitId, UnityAdsShowCompletionState showCompletionState)
         {
+            string completion = showCompletionState == UnityAdsShowCompletionState.COMPLETED ? "completed"
+                : showCompletionState == UnityAdsShowCompletionState.SKIPPED ? "partial" : "incomplete";
+            ReportImpression(adUnitId, completion);
             CompleteDeferredAction();
             LoadInterstitial();
+        }
+
+        /// <summary>Sends the built-in adImpression once per shown ad (only if the ad actually started showing).</summary>
+        private void ReportImpression(string adUnitId, string completion)
+        {
+            if (!impressionOpen) return;
+            impressionOpen = false;
+            long watchedMs = (long)Mathf.Max(0f, (Time.realtimeSinceStartup - impressionStartedAt) * 1000f);
+            LevelAnalytics.AdImpression("UnityAds", adUnitId, placementName, "interstitial", completion, impressionClicked, watchedMs);
+        }
+
+        private void OnApplicationQuit()
+        {
+            // The game was closed while an ad was showing: still count the impression.
+            ReportImpression(interstitialAdUnitId, "incomplete");
         }
 
         public static void ShowBeforeReturningToMenu(int levelNumber, Action continuation)
@@ -179,6 +211,7 @@ namespace Gameplay
             }
 
             instance.requestedLevel = levelNumber;
+            instance.placementName = PlacementReturnToMenu;
             instance.afterAdAction = continuation;
             if (instance.adLoaded)
             {

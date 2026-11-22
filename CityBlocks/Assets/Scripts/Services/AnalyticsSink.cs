@@ -22,6 +22,8 @@ namespace CloudServices
         {
             public string Name;
             public Dictionary<string, object> Parameters;
+            /// <summary>Set for UGS built-in events (e.g. adImpression); sent as-is, without custom parameters.</summary>
+            public Unity.Services.Analytics.Event Standard;
         }
 
         private static readonly Queue<PendingEvent> Pending = new Queue<PendingEvent>();
@@ -53,6 +55,21 @@ namespace CloudServices
                 Parameters = parameters != null ? new Dictionary<string, object>(parameters) : new Dictionary<string, object>()
             };
 
+            Submit(pendingEvent);
+        }
+
+        /// <summary>
+        /// Records a UGS built-in event (e.g. AdImpressionEvent). Built-in events have a fixed schema, so the common
+        /// custom parameters are not added. Buffered like custom events until services are ready.
+        /// </summary>
+        public static void RecordStandard(Unity.Services.Analytics.Event standardEvent)
+        {
+            if (standardEvent == null) return;
+            Submit(new PendingEvent { Name = standardEvent.GetType().Name, Standard = standardEvent });
+        }
+
+        private static void Submit(PendingEvent pendingEvent)
+        {
             if (!collectionStarted) TryStartCollection();
             if (collectionStarted)
             {
@@ -93,7 +110,14 @@ namespace CloudServices
                 return;
             }
 
-            // account_kind describes the account the event is uploaded under, so it is resolved now rather than when
+            if (pendingEvent.Standard != null)
+            {
+                try { AnalyticsService.Instance.RecordEvent(pendingEvent.Standard); }
+                catch (Exception exception) { Debug.LogWarning("[AnalyticsSink] RecordEvent(" + pendingEvent.Name + ") failed: " + exception.Message); }
+                return;
+            }
+
+            // account_kinddescribes the account the event is uploaded under, so it is resolved now rather than when
             // the event was recorded (events buffered before sign-in would otherwise say "signed_out").
             if (pendingEvent.Parameters.ContainsKey(AccountKindKey))
                 pendingEvent.Parameters[AccountKindKey] = CloudBootstrap.AccountKind;

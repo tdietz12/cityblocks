@@ -27,6 +27,14 @@ namespace CityBlocks.EditorTests
             public string EventName;
             public Action Invoke;
             public object[] Expected; // key, value pairs (call-site params only)
+            public bool Standard;     // UGS built-in event: fixed schema, no common params, not registered in Event Manager
+        }
+
+        private static Case S(string method, string eventName, Action invoke, params object[] expected)
+        {
+            Case testCase = C(method, eventName, invoke, expected);
+            testCase.Standard = true;
+            return testCase;
         }
 
         private static int _checks;
@@ -104,8 +112,10 @@ namespace CityBlocks.EditorTests
                     "transaction_id", "t1", "value", 2.99, "currency", "USD", "items", "no_ads", "is_first_purchase", 1, "levels_completed", 12),
                 C("PurchaseFailed", "purchase_failed", () => LevelAnalytics.PurchaseFailed("no_ads"),
                     "item_id", "no_ads"),
-                C("AdImpression", "ad_impression", () => LevelAnalytics.AdImpression("unity_ads", "interstitial", 5, false),
-                    "ad_platform", "unity_ads", "ad_format", "interstitial", "level_number", 5, "is_endless_level", 0),
+                S("AdImpression", LevelAnalytics.AdImpressionEventName,
+                    () => LevelAnalytics.AdImpression("UnityAds", "Interstitial_iOS", "return_to_menu", "interstitial", "partial", true, 4200L),
+                    "adProvider", "UnityAds", "placementId", "Interstitial_iOS", "placementName", "return_to_menu",
+                    "placementType", "INTERSTITIAL", "adCompletionStatus", "Partial", "adHasClicked", true, "adTimeWatchedMs", 4200L),
                 C("AdLoadFailed", "ad_load_failed", () => LevelAnalytics.AdLoadFailed("interstitial", "load:NO_FILL:x"),
                     "ad_format", "interstitial", "error_code", "load:NO_FILL:x"),
             };
@@ -166,7 +176,7 @@ namespace CityBlocks.EditorTests
                     Check(recorded == before + 1, testCase.Method + " must record exactly one event");
                     Check(lastName == testCase.EventName, testCase.Method + " sent '" + lastName + "', expected '" + testCase.EventName + "'");
 
-                    var expectedKeys = new HashSet<string>(CommonParams);
+                    var expectedKeys = testCase.Standard ? new HashSet<string>() : new HashSet<string>(CommonParams);
                     for (int i = 0; i < testCase.Expected.Length; i += 2)
                     {
                         string key = (string)testCase.Expected[i];
@@ -177,8 +187,13 @@ namespace CityBlocks.EditorTests
                     }
                     string extra = string.Join(", ", lastParams.Keys.Where(k => !expectedKeys.Contains(k)));
                     Check(extra.Length == 0, testCase.Method + " sent unexpected params: " + extra);
+                    if (testCase.Standard)
+                    {
+                        Check(CommonParams.All(k => !lastParams.ContainsKey(k)), testCase.Method + ": built-in events must not carry custom common params");
+                        continue;
+                    }
 
-                    Check(lastParams["player_level_max"] is int && lastParams["session_number"] is int &&
+                    Check(lastParams["player_level_max"]is int && lastParams["session_number"] is int &&
                           lastParams["is_online"] is int && lastParams["account_kind"] is string, testCase.Method + ": common param types changed");
 
                     if (!schemas.TryGetValue(lastName, out var schema)) schemas[lastName] = schema = new SortedDictionary<string, string>();

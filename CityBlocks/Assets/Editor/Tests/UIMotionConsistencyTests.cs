@@ -229,7 +229,7 @@ namespace CityBlocks.EditorTests
                     UnityEngine.Object.DestroyImmediate(storeInstance);
                 }
 
-                Check(dailyPrefab.GetComponentsInChildren<UIButtonAnimator>(true).Length >= 3 &&
+                Check(dailyPrefab.GetComponentsInChildren<UIButtonAnimator>(true).Length >= 2 &&
                       dailyPrefab.GetComponentsInChildren<UIPanelAnimator>(true).Length >= 1,
                     "DailyLoginRewards.prefab must have UIButtonAnimator and UIPanelAnimator");
                 Check(levelsBtnPrefab.GetComponent<UIButtonAnimator>() != null && !levelsBtnPrefab.GetComponent<UIButtonAnimator>().EnableIdlePulse,

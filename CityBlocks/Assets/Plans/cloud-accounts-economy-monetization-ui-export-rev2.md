@@ -327,7 +327,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 | `daily_streak_broken` **(new)** | `previous_streak`, `days_missed` | DailyLoginStreakService | 10 |
 | `notification_opened` **(new)** | `notification_id`, `hours_since_scheduled` | DailyLoginNotification (on launch) | 10 |
 | `store_open`, `view_item_list`, `view_item`, `begin_checkout` | existing | StoreOfferWindow → StoreScreen | 11 |
-| `ad_impression`, `ad_load_failed` | existing | UnityAdsProvider | 11 |
+| `adImpression` (UGS built-in, replaces `ad_impression`; no common params, nothing to register), `ad_load_failed` (`error_code` prefixed `load:`/`show:`) | existing | UnityAdsProvider | 11 ✅ |
 | `sign_in` | `method`(gamecenter/apple/guest/session), `is_new_player` | AccountService | 15–16 |
 | `account_linked` | `provider` | AccountService | 17 |
 | `coins_earned` / `coins_spent` **(new)** | `amount`, `source`/`sink`, `balance_after` | PlayerWallet (from server response) | 22+ |
@@ -424,7 +424,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Opening the app from the daily notification logs `notification_opened`; skipping a day (simulated in the Editor by moving the stored last-claim date) logs `daily_streak_broken`.
 - **Depends on:** 4
 
-#### Step 11 — Store & ads audit, event tests, Event Manager registration · S (🧑 partly you)
+#### Step 11 — Store & ads audit, event tests, Event Manager registration · S (🧑 partly you) · ✅ code done (audit fixes: combined store panel also logs view_item for no_ads; ad_load_failed error_code prefixed load:/show:; booster_id null guard. ad_impression → UGS built-in `adImpression` via `AnalyticsSink.RecordStandard`, sent once per ad when it closes, with completion/click/watch time and placement `return_to_menu`/`after_win`. StoreProviderBridge deleted (unused, would double-send purchase). Tools ▸ City Blocks ▸ Tests ▸ Level Analytics Checks passes 1177 checks. Left: 🧑 final Event Manager registration check + 10-min device session)
 - **Files:** `StoreOfferWindow.cs`, `UnityAdsProvider.cs`, `StoreProviderBridge.cs` (check that every existing store/ad event goes through `LevelAnalytics` with consistent params; nothing calls a backend directly); new `Assets/Editor/Tests/LevelAnalyticsTests.cs` (every public `LevelAnalytics` method → expected name + params via `EventRecorded`).
 - **🧑 You:** register all Milestone B events + parameters in Dashboard ▸ Analytics ▸ Event Manager (I'll give you a copy-paste table of event names, parameter names and types).
 - **🔍 Checkpoint:** Tests pass; after a 10-minute play session on device, every event from Steps 6–10 appears in the UGS Event Browser with no "invalid event" entries.
@@ -681,7 +681,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 ## Milestone L — Cleanup & launch
 
 #### Step 52 — Remove dead code · S
-- **Files:** `StoreProviderBridge.cs` (delete if no scene references it — checked first), leftover local grant code in `PowerUpStore.cs`, deprecated `softCurrency/hardCurrency`, the spike script.
+- **Files:** ~~`StoreProviderBridge.cs`~~ (already deleted in Step 11), leftoverlocal grant code in `PowerUpStore.cs`, deprecated `softCurrency/hardCurrency`, the spike script.
 - **🔍 Checkpoint:** Compiles; all tests pass; nothing in the scenes is missing a reference.
 - **Depends on:** 37–44
 

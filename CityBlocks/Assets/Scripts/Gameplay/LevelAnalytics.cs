@@ -89,9 +89,9 @@ namespace Gameplay
         public static string BoosterId(GameController.PowerUpType type) => type == GameController.PowerUpType.lookAhead ? "look_ahead" : type.ToString();
 
         public static void BoosterUsed(string boosterId, int level, int attempt, bool endless, string attemptId, int balanceAfter) => Record("booster_used",
-            "booster_id", boosterId ?? "", "level_number", level,"attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
+            "booster_id", boosterId ?? "", "level_number", level, "attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
             "attempt_id", attemptId ?? "", "balance_after", balanceAfter);
-        public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
+public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
             "booster_id", BoosterId(type), "amount", amount, "source", source ?? "", "balance_after", balanceAfter);
         /// <summary>A continue (extra moves) was shown on the loss screen. continueIndex: 1 = first continue in this attempt.</summary>
         public static void ContinueOffered(int level, int attempt, string attemptId, int continueIndex, int movesOffered) => Record("continue_offered",
@@ -115,8 +115,53 @@ namespace Gameplay
             "value", value, "currency", currency ?? "", "items", items ?? "", "is_first_purchase", firstPurchase ? 1 : 0,
             "levels_completed", levelsCompleted);
         public static void PurchaseFailed(string itemId) => Record("purchase_failed", "item_id", itemId ?? "");
-        public static void AdImpression(string platform, string format, int level, bool endless) => Record("ad_impression",
-            "ad_platform", platform ?? "", "ad_format", format ?? "", "level_number", level, "is_endless_level", endless ? 1 : 0);
+        /// <summary>Name the built-in ad event is reported under (UGS standard event, not registered in Event Manager).</summary>
+        public const string AdImpressionEventName = "adImpression";
+
+        /// <summary>
+        /// UGS built-in adImpression event. It has a fixed schema, so the common custom params are NOT attached.
+        /// Send it once per shown ad, when the ad closes, so completion and click are known.
+        /// provider: AdProvider name (e.g. "UnityAds"). placementType: "interstitial", "rewarded" or "banner".
+        /// completion: "completed", "partial" (skipped) or "incomplete".
+        /// </summary>
+        public static void AdImpression(string provider, string placementId, string placementName, string placementType,
+            string completion, bool clicked, long watchedMs)
+        {
+            Unity.Services.Analytics.AdProvider adProvider =
+                Enum.TryParse(provider ?? "", true, out Unity.Services.Analytics.AdProvider parsedProvider) ? parsedProvider : Unity.Services.Analytics.AdProvider.Other;
+            Unity.Services.Analytics.AdPlacementType adPlacementType =
+                Enum.TryParse(placementType ?? "", true, out Unity.Services.Analytics.AdPlacementType parsedType) ? parsedType : Unity.Services.Analytics.AdPlacementType.OTHER;
+            Unity.Services.Analytics.AdCompletionStatus adCompletion =
+                Enum.TryParse(completion ?? "", true, out Unity.Services.Analytics.AdCompletionStatus parsedCompletion) ? parsedCompletion : Unity.Services.Analytics.AdCompletionStatus.Incomplete;
+
+            Dictionary<string, object> parameters = new Dictionary<string, object>
+            {
+                { "adProvider", adProvider.ToString() },
+                { "placementId", placementId ?? "" },
+                { "placementName", placementName ?? "" },
+                { "placementType", adPlacementType.ToString() },
+                { "adCompletionStatus", adCompletion.ToString() },
+                { "adHasClicked", clicked },
+                { "adTimeWatchedMs", watchedMs }
+            };
+            try { EventRecorded?.Invoke(AdImpressionEventName, parameters); }
+            catch (Exception exception) { Debug.LogException(exception); }
+
+            try
+            {
+                CloudServices.AnalyticsSink.RecordStandard(new Unity.Services.Analytics.AdImpressionEvent
+                {
+                    AdProvider = adProvider,
+                    PlacementId = placementId ?? "",
+                    PlacementName = placementName ?? "",
+                    PlacementType = adPlacementType,
+                    AdCompletionStatus = adCompletion,
+                    AdHasClicked = clicked,
+                    AdTimeWatchedMs = watchedMs
+                });
+            }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
         public static void AdLoadFailed(string format, string code) => Record("ad_load_failed", "ad_format", format ?? "", "error_code", code ?? "");
         public static void RecordInsufficientFunds(string currency, double shortfall, string itemName, string levelName) =>
             InsufficientFunds(currency, shortfall, itemName, levelName);
