@@ -28,6 +28,8 @@ namespace UI
         [SerializeField, Min(0f)] private float _shakeAmplitude = 8f;
         [SerializeField] private bool _gentleBannerPulse;
 
+        private const float MaxFrameStep = 1f / 30f;
+
         private Vector2 _cardBasePosition;
         private bool _hasCardBasePosition;
         private float _elapsed;

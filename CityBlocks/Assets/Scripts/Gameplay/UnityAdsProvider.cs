@@ -141,16 +141,16 @@ namespace Gameplay
         {
             loading = false;
             adLoaded = false;
-            LevelAnalytics.AdLoadFailed("interstitial", error + ":" + message);
-            Debug.LogWarning("Unity Ads failed to load " + adUnitId + ": " + error + " - " + message);
+            LevelAnalytics.AdLoadFailed("interstitial", "load:" + error + ":" + message);
+            Debug.LogWarning("Unity Ads failed to load "+ adUnitId + ": " + error + " - " + message);
             CompleteDeferredAction();
         }
 
         public void OnUnityAdsShowFailure(string adUnitId, UnityAdsShowError error, string message)
         {
             adLoaded = false;
-            LevelAnalytics.AdLoadFailed("interstitial", error + ":" + message);
-            Debug.LogWarning("Unity Ads failed to show " + adUnitId + ": " + error + " - " + message);
+            LevelAnalytics.AdLoadFailed("interstitial", "show:" + error + ":" + message);
+            Debug.LogWarning("Unity Ads failed to show "+ adUnitId + ": " + error + " - " + message);
             CompleteDeferredAction();
             LoadInterstitial();
         }

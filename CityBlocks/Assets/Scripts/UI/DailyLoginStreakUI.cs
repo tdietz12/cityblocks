@@ -55,7 +55,12 @@ namespace UI
         [Tooltip("Color of the coin amount on upcoming tiles.")]
         [SerializeField] private Color coinColor = new Color(0.98f, 0.78f, 0.2f);
 
+        [Header("Login entrance")]
+        [Tooltip("Seconds (real time) to wait after the main menu appears before the automatic popup animates in, so scene-load hitches don't skip the animation.")]
+        [SerializeField, Min(0f)] private float autoOpenDelay = 0.45f;
+
         private bool popupOpen;
+        private bool autoOpenPending;
         private int shownDay;
         private float openedAt;
         // True while the modal is showing an editor preview (nothing claimed), so closing it sends no analytics.
@@ -66,14 +71,23 @@ namespace UI
             if (collectButton != null) collectButton.onClick.AddListener(() => Dismiss("collect"));
             if (closeButton != null) closeButton.onClick.AddListener(() => Dismiss("close"));
 if (panel != null && !popupOpen) panel.SetActive(false);
-            TryAutoOpen();
-        }
+StartCoroutine(AutoOpenAfterDelay());
+}
 
-        private void OnApplicationPause(bool paused)
-        {
-            // Covers midnight passing while the player sits on the main menu with the app in the background.
-            if (!paused) TryAutoOpen();
-        }
+private void OnApplicationPause(bool paused)
+{
+// Covers midnight passing while the player sits on the main menu with the app in the background.
+if (!paused && isActiveAndEnabled) StartCoroutine(AutoOpenAfterDelay());
+}
+
+private System.Collections.IEnumerator AutoOpenAfterDelay()
+{
+if (autoOpenPending || popupOpen) yield break;
+autoOpenPending = true;
+if (autoOpenDelay > 0f) yield return new WaitForSecondsRealtime(autoOpenDelay);
+autoOpenPending = false;
+TryAutoOpen();
+}
 
         private void Update()
         {

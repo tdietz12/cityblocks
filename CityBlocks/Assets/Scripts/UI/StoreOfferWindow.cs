@@ -42,6 +42,9 @@ namespace UI
             LevelAnalytics.StoreOpened("daily_special", CurrentLevelName());
             LevelAnalytics.ItemListViewed("daily_special");
             LevelAnalytics.ItemViewed(dailySpecial.productId, "daily_special");
+            // The combined panel also lists the no-ads offer, so report that it was seen too.
+            if (dailySpecialWindow == noAdsWindow && noAdsOffer != null && noAdsOffer.noAdsOffer && !PowerUpStore.AdsRemoved)
+                LevelAnalytics.ItemViewed(noAdsOffer.productId, "no_ads");
             ShowCombinedOfferPanel();
         }
 

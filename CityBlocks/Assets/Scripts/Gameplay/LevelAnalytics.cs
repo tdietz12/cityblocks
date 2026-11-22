@@ -89,7 +89,7 @@ namespace Gameplay
         public static string BoosterId(GameController.PowerUpType type) => type == GameController.PowerUpType.lookAhead ? "look_ahead" : type.ToString();
 
         public static void BoosterUsed(string boosterId, int level, int attempt, bool endless, string attemptId, int balanceAfter) => Record("booster_used",
-            "booster_id", boosterId, "level_number", level, "attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
+            "booster_id", boosterId ?? "", "level_number", level,"attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
             "attempt_id", attemptId ?? "", "balance_after", balanceAfter);
         public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
             "booster_id", BoosterId(type), "amount", amount, "source", source ?? "", "balance_after", balanceAfter);
