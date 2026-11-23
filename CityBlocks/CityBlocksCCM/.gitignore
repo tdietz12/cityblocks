@@ -1,0 +1,10 @@
+# Unity's root .gitignore ignores *.sln / *.csproj; keep the Cloud Code module tracked.
+!*.sln
+!*.csproj
+!Properties/PublishProfiles/*.pubxml
+!**/Properties/PublishProfiles/*.pubxml
+
+# .NET build output
+bin/
+obj/
+*.user

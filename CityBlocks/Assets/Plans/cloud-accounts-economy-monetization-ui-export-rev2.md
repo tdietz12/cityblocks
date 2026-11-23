@@ -15,7 +15,7 @@
 > | Coins | **Earned + purchased** |
 > | Offline | Levels & Endless **playable offline**; power-ups, coins, continues, store **locked offline** |
 > | UI export | **PNG screenshots + Figma-ready package** (SVG per screen + component PNGs + manifest) |
-> | **Order (rev. 2)** | **Player tracking first.** Analytics → retention events → accounts → cloud inventory + heartbeat/offline lock → cloud progress → cloud-validated purchases. Store UI / coin continues and the UI export come afterwards |
+> | **Order (rev. 2)** | **Player tracking first.** Analytics → retention events → accounts → cloud inventory + connectivity/offline lock (no heartbeat — option B) → cloud progress → cloud-validated purchases. Store UI / coin continues and the UI export come afterwards |
 > | **First-launch sign-in (rev. 2)** | Confirmed: silent Game Center → one-time Sign in with Apple / Continue as Guest screen → link later in Settings. The account (Game Center or Apple) carries progress, coins and power-ups across devices |
 > | **Retention event scope (rev. 2)** | Level lifecycle (start / win / lose / restart / quit / resume) + power-up use + extra-move continues, **plus** all four groups: Session & funnel, Economy flow, Store & ads, Daily & re-engagement |
 
@@ -174,7 +174,7 @@ Prices use `Product.metadata.localizedPriceString` from Unity IAP (never hard-co
 | File | Current role | Change |
 |---|---|---|
 | `Assets/Scripts/Gameplay/PowerUpStore.cs` | Static inventory backed by local `level-progress.json`; `FulfillPurchase`, `TryUse`, `AdsRemoved` | Step 9: retention events. Step 26: becomes a façade over new `PlayerWallet` (server-backed cache); `TryUse` → async server-confirmed `UsePowerUpAsync`. Step 37: local fulfilment removed (Economy grants). |
-| `Assets/Scripts/Gameplay/UnityIapProvider.cs` | Unity IAP 5 `StoreController`; grants locally then `ConfirmPurchase` | On `OnPurchasePending` → `EconomyService.Instance.Purchases.RedeemAppleAppStorePurchaseAsync(...)` → only on success refresh wallet + `ConfirmPurchase`. `RestoreEntitlements` → redeem no-ads via Economy. Add public `RestorePurchases()` + a pending-transaction check for the heartbeat. |
+| `Assets/Scripts/Gameplay/UnityIapProvider.cs` | Unity IAP 5 `StoreController`; grants locally then `ConfirmPurchase` | On `OnPurchasePending` → `EconomyService.Instance.Purchases.RedeemAppleAppStorePurchaseAsync(...)` → only on success refresh wallet + `ConfirmPurchase`. `RestoreEntitlements` → redeem no-ads via Economy. Add public `RestorePurchases()` + a pending-transaction check run on resume / back online (Step 37). |
 | `Assets/Scripts/Gameplay/StoreOfferDefinition.cs` | ScriptableObject offer | Add `economyPurchaseId`, `coins`, `oneTimePerAccount`, `badge`, `sortOrder`, `showInStore`, `showOnFailScreen`; remove/obsolete `priceInPowerUpUses`. |
 | `Assets/Scripts/Gameplay/LevelAnalytics.cs` | Firebase event façade (`Record`, typed helpers, `EventRecorded` hook) | Keep public API (all call sites keep working); swap backend to UGS Analytics via new `AnalyticsSink`; central common params; new typed events (Milestone B). |
 | `Assets/Scripts/Gameplay/FirebaseBootstrap.cs` | Firebase App + Analytics + Crashlytics | **Deleted** (Step 5, done). |
@@ -216,9 +216,9 @@ public static class AccountService
     Task DeleteAccountAsync();                                 // CloudCode DeleteMyData → AuthenticationService.DeleteAccountAsync
 }
 
-public static class ConnectivityService                        // heartbeat owner
+public static class ConnectivityService                        // online state owner (event-driven checks, no heartbeat — option B)
 {
-    bool IsOnline { get; }                                     // authorized && last heartbeat OK && reachability != NotReachable
+    bool IsOnline { get; }                                     // authorized && last cloud call OK && reachability != NotReachable
     event Action<bool> OnlineChanged;
     // 60 s while foregrounded, immediately on OnApplicationPause(false), on network change
 }
@@ -261,7 +261,7 @@ Endpoints (`[CloudCodeFunction]`):
 | Endpoint | Purpose | Writes |
 |---|---|---|
 | `Bootstrap(clientVersion, legacyPayload?)` | First call after sign-in. Creates welcome grant once, one-time capped legacy migration, returns `PlayerSnapshot` | Protected Cloud Save `profile`, Economy grants |
-| `Heartbeat(sessionId)` | Returns slim snapshot (coins, power-ups, adsRemoved, serverTimeUtc, configVersion); updates `last_seen` | Protected `profile.lastSeen` |
+| ~~`Heartbeat(sessionId)`~~ | Dropped (option B). `Bootstrap` returns the snapshot on launch / resume; `GetServerTime` gives server time | — |
 | `SubmitLevelResult(level, attemptId, outcome, score, movesRemaining, continuesUsed)` | Idempotent by `attemptId`; max-merges progress; grants win coins | Protected `level_progress`, Economy COINS |
 | `SubmitEndlessResult(runId, score, levelReached)` | Max-merges records; milestone coins | Protected `endless_progress` |
 | `UsePowerUp(type, attemptId, useId)` | Idempotent decrement | Economy PU_* |
@@ -271,7 +271,7 @@ Endpoints (`[CloudCodeFunction]`):
 
 ## Cloud resources (`Assets/CloudServices/`, deployed via Services > Deployment)
 - `Economy`: currencies `COINS`, `PU_DELETE`, `PU_LOOKAHEAD`, `PU_LEVELUP`, `PU_EXTRATURNS`; inventory item `NO_ADS`; Real-Money Purchases `RMP_NOADS`, `RMP_STARTER`, `RMP_SMALL`, `RMP_MEDIUM`, `RMP_LARGE`, `RMP_MEGA`, `RMP_RESCUE` mapped to Apple product IDs.
-- `CityBlocks.rc` Remote Config: `coin_rewards` (JSON), `continue_costs` `[900,1500,2500]`, `continue_moves` 5, `heartbeat_seconds` 60, `welcome_grant` (JSON), `store_layout` (JSON order/badges).
+- ~~`CityBlocks.rc` Remote Config~~ — dropped (option B): `coin_rewards`, `continue_costs` `[900,1500,2500]`, `continue_moves` 5 and `welcome_grant` are constants in the Cloud Code module; `store_layout` lives in the store offer assets.
 - `CityBlocks.ac` Access Control: deny-all-then-allow template; **players can only**: sign in/link, read Economy config/currencies/inventory, `purchases/appleappstore` (receipt redemption), call Cloud Code modules, read own Protected Cloud Save. **Denied:** direct currency/inventory writes, virtual purchases (not used), Cloud Save writes, unlink, player-auth users write (deletion goes through our flow — allow `users**` Write only if `DeleteAccountAsync` requires it; verify in Step 21).
 
 ## Packages to add
@@ -300,7 +300,7 @@ Removed (Step 5, done): the whole Firebase SDK (`Assets/Firebase`, `Assets/Plugi
 ---
 
 ## Analytics event taxonomy (target state)
-All events include `player_level_max`, `session_number`, `is_online`, `account_kind` — plus UGS's own standard `sessionID`/`userID`/`playerID`, which the SDK stamps automatically, so there is no custom `session_id` (added centrallyin `LevelAnalytics.Record`, so call sites stay one-liners; `is_online` is reachability-only until the heartbeat lands in Step 24, and `account_kind` is `anonymous` until Step 15). All level events (`level_start/complete/fail/restart/quit/resume`, `continue_*`, `booster_used`) also carry `attempt_id`, so one attempt's whole story can be joined in the Data Explorer. UGS rejects unregistered events, so each step that adds events also lists what to register in Dashboard ▸ Analytics ▸ Event Manager.
+All events include `player_level_max`, `session_number`, `is_online`, `account_kind` — plus UGS's own standard `sessionID`/`userID`/`playerID`, which the SDK stamps automatically, so there is no custom `session_id` (added centrallyin `LevelAnalytics.Record`, so call sites stay one-liners; `is_online` is reachability-only until ConnectivityService lands in Step 24, and `account_kind` is `anonymous` until Step 15). All level events (`level_start/complete/fail/restart/quit/resume`, `continue_*`, `booster_used`) also carry `attempt_id`, so one attempt's whole story can be joined in the Data Explorer. UGS rejects unregistered events, so each step that adds events also lists what to register in Dashboard ▸ Analytics ▸ Event Manager.
 
 | Event | Params | Fired from | Step |
 |---|---|---|---|
@@ -335,7 +335,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 | `booster_blocked_offline` **(new)** | `booster_id` | GameController | 26 |
 | `purchase` → UGS `transaction` standard event | `productID`, `transactionID`, `realCurrency`, items | UnityIapProvider after Economy redemption | 37 |
 | `purchase_failed` | existing + `reason` | UnityIapProvider | 37 |
-| `purchase_restored` **(new)** | `product_id`, `trigger`(heartbeat/resume/restore_button) | ConnectivityService purchase refresh | 38 |
+| `purchase_restored` **(new)** | `product_id`, `trigger`(resume/back_online/restore_button) | ConnectivityService purchase refresh | 38 |
 
 ---
 
@@ -469,11 +469,12 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ---
 
-## Milestone D — Cloud backend skeleton
+## Milestone D — Cloud backend skeleton (option B: no heartbeat)
+> **Decision (backend option B):** single-player game, so no periodic Heartbeat. Player data lives in **Cloud Save** (progress, written by the client) and **Economy** (coins, power-ups, no-ads — **only Cloud Code can change them**, enforced by Access Control). A few small Cloud Code functions do the trusted work: welcome grant, use a power-up, level coin rewards, daily reward (server clock). Purchases are validated by Economy. Online state is checked on events (launch, resume, connection change, before store / power-up use), not by polling.
 
-#### Step 18 — Cloud Code module scaffold + `Heartbeat` · M
-- **Files:** `CityBlocksCCM/**` (sln, csproj, ModuleSetup, PlayerModule with `Heartbeat` returning server time, FolderProfile.pubxml, .gitignore, tests), `Assets/CloudCode/CityBlocks.ccmr`, generated bindings.
-- **🧑 You:** install the .NET 9 SDK if it's missing; press Deploy in Services ▸ Deployment.
+#### Step 18 — Cloud Code module scaffold + `GetServerTime` · M · ✅ code done (CityBlocksCCM/: net9.0 module `CityBlocks` with PlayerModule.GetServerTime (ISO 8601 UTC), ModuleSetup, linux-x64 FolderProfile, NUnit tests (RollForward=Major so they run on the installed .NET 10), .gitignore; Assets/CloudCode/CityBlocks.ccmr; client `CloudServices.CloudFunctions.GetServerTimeAsync()`; Tools ▸ City Blocks ▸ Cloud ▸ Log Server Time. Left: 🧑 Deploy, then Play Mode check)
+- **Files:** `CityBlocksCCM/**` (sln, csproj, ModuleSetup, PlayerModule with `GetServerTime`, FolderProfile.pubxml, .gitignore, tests), `Assets/CloudCode/CityBlocks.ccmr`, generated bindings.
+- **🧑 You:** install the .NET SDK if missing; press Deploy in Services ▸ Deployment.
 - **🔍 Checkpoint:** Deployment goes green; a Play Mode call logs the server time.
 - **Depends on:** 3
 
@@ -482,34 +483,33 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Deployed; visible in the Dashboard ▸ Economy.
 - **Depends on:** 18
 
-#### Step 20 — Remote Config tuning values · S
-- **Files:** `Assets/CloudServices/CityBlocks.rc` (`coin_rewards`, `continue_costs`, `continue_moves`, `heartbeat_seconds`, `welcome_grant`, `store_layout`).
-- **🔍 Checkpoint:** Deployed; a Play Mode fetch logs `continue_costs = [900,1500,2500]`.
-- **Depends on:** 18
+#### Step 20 — ~~Remote Config tuning values~~ · dropped (option B)
+- Tuning values (coin rewards, continue costs, welcome grant) are constants in the Cloud Code module. Remote Config can be added later if live tuning is wanted.
 
 #### Step 21 — Access Control policy · S
-- **Files:** `Assets/CloudServices/CityBlocks.ac` (deny-all-then-allow).
-- **🔍 Checkpoint:** A debug call where the client tries to increment a balance itself is **refused**; sign-in and Cloud Code calls still work.
+- **Files:** `Assets/CloudServices/CityBlocks.ac` — players may read Economy and read/write their own Cloud Save progress; **Economy writes are denied to clients** (only Cloud Code can change balances).
+- **🔍 Checkpoint:** A debug call where the client tries to increment a balance itself is **refused**; sign-in, Cloud Save and Cloud Code calls still work.
 - **Depends on:** 19
 
-#### Step 22 — `Bootstrap` endpoint (welcome grant + snapshot) · M
+#### Step 22 — `Bootstrap` endpoint (welcome grant + legacy migration + snapshot) · M
 - **Files:** `PlayerModule.cs` + tests; client `PlayerSnapshot` DTO.
-- **🔍 Checkpoint:** A new player receives 500 coins + 1 of each power-up exactly once (unit test + Dashboard player view); `powerup_granted(source=welcome)` / `coins_earned(source=welcome)` logged from the snapshot response.
-- **Depends on:** 19, 20, 21
+- **Behavior:** First call per player grants the welcome bundle once and, for players updating from the live version, migrates their local power-up counts (capped) into Economy once. Returns coins, power-ups, no-ads and server time.
+- **🔍 Checkpoint:** A new player receives the welcome bundle exactly once; an existing install keeps its local power-ups (now in the cloud); `powerup_granted(source=welcome|migration)` / `coins_earned(source=welcome)` logged from the response.
+- **Depends on:** 19, 21
 
 ---
 
-## Milestone E — Cloud inventory & heartbeat (display only)
+## Milestone E — Cloud wallet & connectivity (display only)
 
 #### Step 23 — `PlayerWallet` cache + coin chip · M
-- **Files:** new `PlayerWallet.cs`, `CoinChipUI.cs`; coin chip added to the MainMenu and `LevelRulesUI.prefab` PlayPanel. Power-ups still use the local inventory at this point.
+- **Files:** new `PlayerWallet.cs`, `CoinChipUI.cs`; coin chip on the MainMenu and the `LevelRulesUI.prefab` PlayPanel. Power-ups still use the local inventory at this point.
 - **🔍 Checkpoint:** The chip shows the cloud balance after launch and the last cached value when offline.
 - **Depends on:** 22
 
-#### Step 24 — Heartbeat + offline indicator · M
-- **Files:** new `ConnectivityService.cs`, `OfflineIndicatorUI.cs`; `LevelAnalytics.cs` (`offline_mode_changed`; `is_online` common param now comes from the heartbeat).
-- **Behavior:** Each successful beat applies the inventory snapshot (coins, power-ups, no-ads) to `PlayerWallet`. Purchase refresh joins the same loop in Step 38, once purchases are validated by the cloud.
-- **🔍 Checkpoint:** In airplane mode the offline icon appears within 2 heartbeats and clears when the connection returns; the event is logged; changing a balance in the Dashboard shows up in the game within one heartbeat.
+#### Step 24 — `ConnectivityService` + offline indicator · M
+- **Files:** new `ConnectivityService.cs`, `OfflineIndicatorUI.cs`; `LevelAnalytics.cs` (`offline_mode_changed`; the `is_online` common param now comes from `ConnectivityService`).
+- **Behavior:** Online = device reachable + signed in + last cloud call succeeded. Re-checked on launch, on resume, when reachability changes and right before store / power-up use; while offline, retries every 30 s. Each successful check on launch / resume refreshes `PlayerWallet` (calls `Bootstrap`). No periodic polling while online.
+- **🔍 Checkpoint:** Airplane mode → offline badge appears within a few seconds (or at the next action) and clears after reconnecting; `offline_mode_changed` logged; a Dashboard balance change shows up after backgrounding and resuming the app.
 - **Depends on:** 18, 23
 
 ---
@@ -522,48 +522,48 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **Depends on:** 22
 
 #### Step 26 — Switch power-ups to the cloud wallet + offline lock · M
-- **Files:** `PowerUpStore.cs` (becomes a façade over `PlayerWallet`; the local bundle-grant path is disabled — safe now because every `StoreOffers/*.asset` still has an empty `productId`, so no real purchases exist yet), `GameController.cs` (`TryBeginPowerUp`, `ActivateLookAhead`, `Apply*PowerUp` wait for server confirmation), `LevelRulesUI.cs` (lock badge + toast), power-up button scripts, `LevelAnalytics.cs`.
-- **🔍 Checkpoint:** Using a booster lowers the cloud balance; offline → buttons locked, toast shown, `booster_blocked_offline` logged; a rapid double-tap uses only one; `booster_used.balance_after` matches the server value.
+- **Files:** `PowerUpStore.cs` (façade over `PlayerWallet`; the local bundle-grant path is disabled — safe because every `StoreOffers/*.asset` still has an empty `productId`), `GameController.cs` (`TryBeginPowerUp`, `ActivateLookAhead`, `Apply*PowerUp` wait for server confirmation), `LevelRulesUI.cs` (lock badge + toast), power-up button scripts, `LevelAnalytics.cs` (`booster_blocked_offline`).
+- **🔍 Checkpoint:** Using a booster lowers the cloud balance; offline → power-up buttons and the store are locked, toast shown, `booster_blocked_offline` logged; levels stay playable; a rapid double-tap uses only one; `booster_used.balance_after` matches the server value.
 - **Depends on:** 9, 24, 25
 
 ---
 
-## Milestone G — Progress tracking (Leveling + Endless in the cloud)
+## Milestone G — Progress in the cloud (Cloud Save)
 
-#### Step 27 — Pending results queue (local only) · S
-- **Files:** `LevelProgressData.cs` (`pendingResults`, `lastSyncUtc`), `LevelProgressStore.cs`, new `CloudProgressService.cs`, new `PendingResultsQueueTests.cs`.
-- **🔍 Checkpoint:** Tests pass; nothing calls the cloud yet.
-- **Depends on:** —
+#### Step 27 — `CloudProgressService` (Cloud Save upload/download) · M
+- **Files:** new `CloudProgressService.cs`; `LevelProgressStore.cs` / `DataPersistenceController.cs` (mark dirty on change); new `ProgressMergeTests.cs`.
+- **Behavior:** Progress (`LevelProgressData`: levels, stars/scores, Endless record, tutorial flags) is saved to Cloud Save key `progress` when it changes (debounced) and when the app backgrounds; loaded on launch. Offline changes stay local and upload when back online. Merge = never go backwards (max per level / record).
+- **🔍 Checkpoint:** Win a level → the Dashboard player view shows the updated `progress` key; offline wins upload after reconnecting; tests for the merge rules pass.
+- **Depends on:** 24
 
-#### Step 28 — `SubmitLevelResult` endpoint · S
-- **Files:** `PlayerModule.cs` + tests (idempotent by `attemptId`, max-merge, first-clear coins).
+#### Step 28 — `AwardLevelCoins` endpoint · S
+- **Files:** `PlayerModule.cs` + tests (idempotent by `attemptId`; coins only for first clears / rules from the coin table).
 - **🔍 Checkpoint:** Tests pass; deployed.
 - **Depends on:** 22
 
-#### Step 29 — Wire `LevelSession` to cloud progress · M
-- **Files:** `LevelSession.cs` (queue a result on Complete / FinalizeFailure using the `attemptId` + `continuesUsed` added in Step 7), `LevelAnalytics.cs` (`coins_earned(source=level_win)` from the server response), `ConnectivityService.cs` (flushes the queue on heartbeat).
-- **🔍 Checkpoint:** Win a level offline → coins appear after reconnecting; the Dashboard shows a Protected `level_progress` key.
+#### Step 29 — Level wins pay coins through the cloud · M
+- **Files:** `LevelSession.cs` (calls `AwardLevelCoins` on Complete using the `attemptId` from Step 7; queued locally and retried when back online), `LevelAnalytics.cs` (`coins_earned(source=level_win)` from the server response).
+- **🔍 Checkpoint:** Winning a new level grants coins once; replaying doesn't; an offline win pays after reconnecting.
 - **Depends on:** 7, 24, 27, 28
 
-#### Step 30 — Endless results to the cloud · M
-- **Files:** `PlayerModule.cs` (`SubmitEndlessResult`), `GameController.cs`, `DataPersistenceController.cs` (the `endless_new_record` event already exists from Step 8).
-- **🔍 Checkpoint:** The Endless record shows in the cloud and is restored on a second device.
-- **Depends on:** 8, 29
+#### Step 30 — ~~Endless results to the cloud~~ · merged into Step 27
+- The Endless record is part of the Cloud Save `progress` data (the `endless_new_record` event already exists from Step 8).
 
-#### Step 31 — Merge on sign-in + legacy migration · M
-- **Files:** `CloudProgressService.cs`, `PlayerModule.cs` (`Bootstrap` legacy payload with caps), new `ProgressMergeTests.cs`.
-- **🔍 Checkpoint:** An existing install at local level 20 updates → the cloud shows level 20; a second device restores it; progress never goes down.
-- **Depends on:** 29, 30
+#### Step 31 — Merge on sign-in / account switch + legacy migration · M
+- **Files:** `CloudProgressService.cs`, `AccountService.cs` (reload after switching accounts), `ProgressMergeTests.cs`.
+- **Behavior:** First sign-in uploads the existing local progress (players updating from the live version keep their levels). Switching to another existing account (Step 17) loads that account's progress, merged with what's on the device without going backwards.
+- **🔍 Checkpoint:** An existing install at local level 20 updates → the cloud shows level 20; a second device / reinstall restores it; progress never goes down.
+- **Depends on:** 17, 27
 
-#### Step 32 — Server-side daily reward pays coins · M
+#### Step 32 — Server-side daily reward (server clock) · M
 - **Files:** `PlayerModule.cs` (`ClaimDailyReward`), `DailyLoginStreakService.cs`, `DailyLoginStreakUI.cs`, `DailyLoginNotification.cs` (streak events from Step 10 now use server time).
-- **🔍 Checkpoint:** Claiming grants coins; changing the device clock doesn't allow a second claim; offline shows "Connect to claim".
+- **🔍 Checkpoint:** Claiming grants the reward through Economy; changing the device clock doesn't allow a second claim; offline shows "Connect to claim".
 - **Depends on:** 10, 24
 
 ---
 
-## Milestone H — Purchases through the cloud (validated grants + heartbeat refresh)
-> Needed so that purchased coins / power-ups / no-ads live in the cloud inventory like everything else, and so the heartbeat can refresh purchases. This is the end of the **player tracking** scope.
+## Milestone H — Purchases through the cloud (validated grants)
+> Purchased coins / power-ups / no-ads land in Economy like everything else. Interrupted purchases are finished by Unity IAP itself (it redelivers unfinished transactions on launch / resume); `ConnectivityService` also asks for them when coming back online. No heartbeat needed. This is the end of the **player tracking** scope.
 
 #### Step 33 — IAP products & Apple integration · 🧑 You · S
 - **Do:** Create the 7 IAP products in App Store Connect; add the Apple App Store integration (API key / shared secret) in Dashboard ▸ Economy; set up a Sandbox tester.
@@ -577,7 +577,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 #### Step 35 — Receipt-redemption spike · S · ⚠ decision point
 - **Files:** temporary debug script (removed afterwards).
-- **Do:** Buy the Starter Pack in Sandbox on a device → redeem the Unity IAP 5.4.3 receipt with `RedeemAppleAppStorePurchaseAsync`.
+- **Do:** Buy the Starter Pack in Sandbox on a device → redeem the Unity IAP receipt with `RedeemAppleAppStorePurchaseAsync`.
 - **🔍 Checkpoint:** **Works** → continue to Step 36. **Fails** (StoreKit 2 format) → insert Step 35b: a Cloud Code `RedeemAppleTransaction` endpoint that verifies the signed transaction with Apple's App Store Server API.
 - **Depends on:** 34
 
@@ -586,19 +586,17 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Compiles; the 7 offers appear in the Inspector; existing buttons are still bound.
 - **Depends on:** 34
 
-#### Step 37 — IAP switch-over to server-validated grants · M
-- **Files:** `UnityIapProvider.cs` (redeem with Economy before `ConfirmPurchase`, `RestorePurchases()`, purchases blocked offline), `PowerUpStore.cs` (local grant path removed), `LevelAnalytics.cs` (UGS `transaction` event; `powerup_granted` / `coins_earned` with `source=purchase`).
-- **🔍 Checkpoint:** In Sandbox, items arrive only after server validation; killing the app mid-purchase → granted exactly once on relaunch.
+#### Step 37 — IAP switch-over to server-validated grants (+ interrupted purchases) · M
+- **Files:** `UnityIapProvider.cs` (redeem with Economy before `ConfirmPurchase`; `RestorePurchases()`; purchases blocked offline; on resume / back online: `FetchPurchases()` → redeem any unconfirmed transactions), `ConnectivityService.cs` (triggers that check), `PowerUpStore.cs` (local grant path removed), `LevelAnalytics.cs` (UGS `transaction` event; `powerup_granted` / `coins_earned` with `source=purchase`; `purchase_restored` with `trigger` = resume / back_online / restore_button).
+- **🔍 Checkpoint:** In Sandbox, items arrive only after server validation; killing the app or going offline mid-purchase → granted exactly once after relaunch / reconnect.
 - **Depends on:** 26, 35, 36
 
-#### Step 38 — Heartbeat purchase refresh · S · *added in rev. 2*
-- **Files:** `ConnectivityService.cs` (on resume, on every 5th beat and when coming back online: `FetchPurchases()` → redeem any unconfirmed transactions with Economy → apply the returned inventory), `UnityIapProvider.cs` (expose a pending-transactions check), `LevelAnalytics.cs` (`purchase_restored` with `trigger`).
-- **🔍 Checkpoint:** Buy in Sandbox, go to airplane mode before the grant arrives, come back online → the grant arrives through the heartbeat exactly once and `purchase_restored(trigger=heartbeat)` is logged.
-- **Depends on:** 24, 37
+#### Step 38 — ~~Heartbeat purchase refresh~~ · merged into Step 37
+- Interrupted purchases are handled by Unity IAP redelivery + the resume / back-online check in Step 37.
 
 #### Step 39 — No-ads from the cloud entitlement · S
 - **Files:** `PowerUpStore.cs` / `PlayerWallet.cs` (`AdsRemoved`), `UnityAdsProvider.cs`, NO ADS menu button.
-- **🔍 Checkpoint:** Buying no-ads stops interstitials; after reinstall + Restore ads stay off; ads stay off offline.
+- **🔍 Checkpoint:** Buying no-ads stops interstitials; after reinstall + Restore ads stay off; ads stay off offline (cached).
 - **Depends on:** 37
 
 ---
@@ -693,7 +691,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ## Design notes referenced by the steps
 - **Sign-in order (Steps 15–17):** cached session token → `SignInAnonymouslyAsync()` restores it silently (works for any linked account) · otherwise Game Center: `GKLocalPlayer.Authenticate()` → `FetchItems()` → `SignInWithAppleGameCenterAsync(signature, teamPlayerId, publicKeyUrl, salt, timestamp)` · otherwise the fallback panel: `SignInWithAppleAsync(idToken)` or `SignInAnonymouslyAsync()`. On a new device, signing in with the same Game Center/Apple ID returns the same `PlayerId`, so the cloud snapshot restores everything.
-- **Heartbeat (Steps 24, 29, 38):** `Heartbeat` every `heartbeat_seconds` (60) while in the foreground, immediately on resume and when reachability changes. Two consecutive failures or `NotReachable` → offline (power-ups, coins, continues and store lock instantly). Each successful beat applies the inventory snapshot (Step 24) and flushes pending level/Endless results (Step 29); on resume, every 5th beat and when coming back online it also runs `FetchPurchases()` to finish any interrupted transactions (Step 38).
+- **Connectivity (Steps 24, 26, 29, 37) — option B, no heartbeat:** online = reachable + signed in + last cloud call succeeded. Checked on launch, resume, reachability change and right before store / power-up use; retried every 30 s while offline. Offline → power-ups, coins, continues and store lock instantly; levels stay playable and progress / coin awards upload when back online. Launch / resume also refreshes the wallet (`Bootstrap`) and asks Unity IAP for unfinished purchases.
 - **Analytics while offline (Steps 4–11):** gameplay events are still recorded offline; the UGS SDK caches them and uploads on reconnect, with `is_online=0` so offline play can be analysed separately.
 - **Server-confirmed spends (Steps 26, 43):** the button shows busy and input is locked during the call, with a 3 s timeout. Balances only change on the server, so a timeout never double-charges; idempotency keys (`useId`, `attemptId`+`continueIndex`) are stored in Protected `processed_ops` (ring buffer of the last 500).
 - **Merge rules (Step 31):** `highestUnlockedLevel = max`, `completedLevels = union`, records = max; progress never goes down. Legacy wallet migration is capped server-side (for example ≤ 50 of each power-up).
@@ -728,14 +726,14 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 1. Fresh install with Game Center signed in → no sign-in UI, banner only, `sign_in(method=gamecenter,is_new_player=1)`, welcome grant visible.
 2. Fresh install with Game Center signed out → fallback screen; Sign in with Apple works; Guest works; later link from Settings.
 3. Second device, same Game Center/Apple ID → identical level progress, Endless record, coins, power-ups, no-ads.
-4. Purchase each bundle in Sandbox → balance updates only after Economy redemption; kill app mid-purchase → relaunch → heartbeat/`FetchPurchases` completes grant exactly once.
+4. Purchase each bundle in Sandbox → balance updates only after Economy redemption; kill app mid-purchase → relaunch → Unity IAP redelivery / `FetchPurchases` completes grant exactly once.
 5. No-ads: buy, reinstall, Restore Purchases → ads stay off; offline after owning → ads still off.
 6. Fail a level with ≥ 900 coins → +5 moves continues same board; 2nd continue costs 1,500; insufficient coins → Store opens; Rescue Bundle → moves + rewards.
 7. Airplane mode: levels & Endless playable; power-up buttons locked with toast; continue/store show offline banner; win offline → coins appear after reconnect (queued result).
 8. Delete Account → data wiped, next launch is a brand-new player.
 9. UGS Analytics Event Browser shows all events from checks 1–8 with correct params; a forced test crash on device appears in Cloud Diagnostics with a readable stack and player metadata.
 10. Retention funnel check (after Step 11, again at launch): in the Data Explorer, build `session_start → level_select → level_start → level_complete` and `level_fail → continue_offered → continue_purchased` funnels and confirm numbers are plausible for a 1-day TestFlight group; level 1–10 win rate and restart rate can be charted per level from `attempt_id`.
-11. Heartbeat refresh: change a player's coin balance in the Dashboard → the game shows it within one heartbeat; airplane mode during a purchase → grant arrives once after reconnect.
+11. Wallet refresh: change a player's coin balance in the Dashboard → the game shows it after backgrounding and resuming; airplane mode during a purchase → grant arrives once after reconnect.
 12. Run **Tools ▸ CityBlocks ▸ Export UI to Desktop** → folder appears on Desktop with all ≈30 screen PNGs/SVGs, component PNGs, manifest; drag SVGs into Figma → editable named layers.
 
 ## Edge cases
