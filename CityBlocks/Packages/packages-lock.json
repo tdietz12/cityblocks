@@ -1,5 +1,12 @@
 {
   "dependencies": {
+    "com.lupidan.apple-signin-unity": {
+      "version": "https://github.com/lupidan/apple-signin-unity.git?path=Source",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "017ba04d805ed37d783defa5266080c523f72582"
+    },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
       "depth": 0,
