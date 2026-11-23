@@ -445,7 +445,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Compiles in the Editor and an iOS build succeeds.
 - **Depends on:** 2
 
-#### Step 14 — iOS capabilities post-process · S
+#### Step 14 — iOS capabilities post-process · S · ✅ done (`Assets/Editor/iOSCapabilitiesPostProcess.cs`, callbackOrder 100: Game Center + Sign in with Apple (lupidan compatibility helper, AuthenticationServices optional) + In-App Purchase, reusing the existing CODE_SIGN_ENTITLEMENTS = CityBlocks.entitlements. Apple.Core Security build step `AppSandboxEntitlement` turned off (macOS-only key). Test build: entitlements = applesignin + game-center; GameKit/StoreKit/AuthenticationServices linked; Info.plist ITSAppUsesNonExemptEncryption = false via the Apple build profile)
 - **Files:** new `Assets/Editor/iOSCapabilitiesPostProcess.cs` (Game Center, Sign in with Apple and In-App Purchase entitlements via `ProjectCapabilityManager`).
 - **🔍 Checkpoint:** The generated Xcode project lists all 3 capabilities.
 - **Depends on:** 13

@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: AppleSecurityBuildStep
   m_EditorClassIdentifier: Apple.Core.Editor::Apple.Core.AppleSecurityBuildStep
   IsEnabled: 1
-  AppSandboxEntitlement: 1
+  AppSandboxEntitlement: 0
   AllowNetworkServer: 0
   AllowNetworkClient: 0
   AllowCamera: 0
