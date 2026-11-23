@@ -434,13 +434,13 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ## Milestone C — Accounts
 
-#### Step 12 — Apple account setup · 🧑 You · S
+#### Step 12 — Apple account setup · 🧑 You · S · ✅ done (App ID has Game Center, Sign in with Apple, In-App Purchase; Dashboard providers Apple + Apple Game Center enabled; iOS Team ID 93582Q8CCM, automatic signing, build 1)
 - **Bundle ID:** keep `com.Unity-Technologies.com.unity.template.CityBlocks`. The app is already live on the App Store under it, so changing it would make a separate app. Every build is an update: its version/build must be higher than the live release.
 - **Do:** App Store Connect: enable the Game Center and Sign in with Apple capabilities for the bundle ID. Unity Dashboard ▸ Authentication ▸ Identity Providers: add **Apple** and **Apple Game Center**.
 - **🔍 Checkpoint:** Both providers show as enabled in the Dashboard.
 - **Depends on:** 1
 
-#### Step 13 — Import Apple plugins · S (🧑 partly you)
+#### Step 13 — Import Apple plugins · S (🧑 partly you) · ✅ done (Packages/Apple: com.apple.unityplugin.core 3.3.0 + gamekit 4.1.0 as file: tarballs; com.lupidan.apple-signin-unity 1.5.0 via git, pinned by packages-lock; Editor compiles clean; test iOS build succeeded, Xcode project links GameKit + AuthenticationServices)
 - **Files:** `Packages/manifest.json`, `Packages/Apple/*.tgz` (Apple.Core + Apple.GameKit, built on your Mac with Apple's build script; I'll provide the commands), Sign in with Apple plugin.
 - **🔍 Checkpoint:** Compiles in the Editor and an iOS build succeeds.
 - **Depends on:** 2

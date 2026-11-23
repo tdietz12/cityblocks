@@ -1,5 +1,19 @@
 {
   "dependencies": {
+    "com.apple.unityplugin.core": {
+      "version": "file:Apple/com.apple.unityplugin.core-3.3.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {}
+    },
+    "com.apple.unityplugin.gamekit": {
+      "version": "file:Apple/com.apple.unityplugin.gamekit-4.1.0.tgz",
+      "depth": 0,
+      "source": "local-tarball",
+      "dependencies": {
+        "com.apple.unityplugin.core": "3.3.0"
+      }
+    },
     "com.lupidan.apple-signin-unity": {
       "version": "https://github.com/lupidan/apple-signin-unity.git?path=Source",
       "depth": 0,
