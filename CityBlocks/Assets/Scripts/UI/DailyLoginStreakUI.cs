@@ -95,6 +95,9 @@ TryAutoOpen();
         }
 
         /// <summary>Claims today's reward and opens the modal, if a reward is available and the player isn't being redirected into the first tutorial.</summary>
+        /// <summary>True while the popup is open or waiting to auto-open (other menu popups queue behind it).</summary>
+        public bool IsShowingOrPending => popupOpen || autoOpenPending;
+
         public void TryAutoOpen() => Open(false);
 
 #if UNITY_EDITOR

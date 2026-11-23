@@ -52,6 +52,8 @@ namespace CityBlocks.EditorTests
                     "is_first_launch", 1, "days_since_install", 3, "days_since_last_session", 1),
                 C("SessionEnded", "session_end", () => LevelAnalytics.SessionEnded(125, 4, "menu"),
                     "duration_s", 125, "levels_played", 4, "screen", "menu"),
+                C("SignIn", "sign_in", () => LevelAnalytics.SignIn("gamecenter", true),
+                    "method", "gamecenter", "is_new_player", 1),
                 C("LevelStarted", "level_start", () => LevelAnalytics.LevelStarted(5, 2, "a1"),
                     "level_number", 5, "attempt_number", 2, "attempt_id", "a1"),
                 C("LevelResumed", "level_resume", () => LevelAnalytics.LevelResumed(5, 2, "a1", 7),

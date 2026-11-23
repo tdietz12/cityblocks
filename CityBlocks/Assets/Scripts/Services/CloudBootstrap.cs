@@ -62,10 +62,13 @@ namespace CloudServices
                 return;
             }
             instance = this;
+            AccountService.KindChanged += _ => UpdateCrashReportMetadata();
 
             bool signedIn = await EnsureSignedInAsync();
             readySource.TrySetResult(signedIn);
         }
+
+        private void Update() => AccountService.Tick();
 
         /// <summary>
         /// Initializes services if needed and signs in (cached session first, anonymous otherwise).
@@ -105,11 +108,10 @@ namespace CloudServices
                 }
 
                 SetState(CloudState.SigningIn);
-                bool hadSession = AuthenticationService.Instance.SessionTokenExists;
-                // With a cached session token this silently restores the same player (works for any linked account).
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                // Cached session → Game Center (iOS) → anonymous; see AccountService.
+                await AccountService.SignInAsync();
                 Debug.Log("[CloudBootstrap] Signed in. Environment=" + EnvironmentName + " PlayerId=" +
-                          AuthenticationService.Instance.PlayerId + (hadSession ? " (restored session)" : " (new player)"));
+                          AuthenticationService.Instance.PlayerId + " Account=" + AccountKind);
                 SetState(CloudState.Online);
                 return true;
             }
@@ -143,6 +145,8 @@ namespace CloudServices
                 SetState(CloudState.Offline);
             };
             AuthenticationService.Instance.SignedOut += () => SetState(CloudState.Offline);
+            // Switching to an existing Apple account signs out and back in; return to Online when that completes.
+            AuthenticationService.Instance.SignedIn += () => { if (State != CloudState.Initializing) SetState(CloudState.Online); };
         }
 
         private static void SetState(CloudState state)
@@ -154,8 +158,8 @@ namespace CloudServices
             catch (Exception exception) { Debug.LogException(exception); }
         }
 
-        /// <summary>Account type sent with analytics and crash reports. Step 15 adds gamecenter / apple / guest.</summary>
-        public static string AccountKind => IsSignedIn ? "anonymous" : "signed_out";
+        /// <summary>Account type sent with analytics and crash reports: gamecenter, apple, anonymous or signed_out.</summary>
+        public static string AccountKind => AccountService.Kind;
 
         /// <summary>
         /// Tags Cloud Diagnostics crash/exception reports so they can be matched to the same player in Analytics.

@@ -450,12 +450,12 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** The generated Xcode project lists all 3 capabilities.
 - **Depends on:** 13
 
-#### Step 15 — Silent Game Center sign-in · M
+#### Step 15 — Silent Game Center sign-in · M · ✅ code done (AccountService: cached session → Game Center (6 s wait; Apple shows its own "Welcome back" banner, or its sign-in sheet if the device isn't signed in) → anonymous; Game Center linked in the background when it finishes, never force-linked; account_kind = gamecenter/apple/anonymous/signed_out; `sign_in` (method, is_new_player). Editor Play Mode: session restore OK; iOS build OK. Left: 🧑 register `sign_in` + params; device checkpoint)
 - **Files:** new `Assets/Scripts/Services/AccountService.cs`; `CloudBootstrap.cs` (cached session → Game Center → anonymous fallback for now); `LevelAnalytics.cs` (`sign_in` with `method`, `is_new_player`; `account_kind` common param becomes real).
 - **🔍 Checkpoint (device):** Fresh install with Game Center signed in → only the system banner appears; `PlayerInfo` shows a Game Center identity; reinstalling keeps the same PlayerId; `sign_in(method=gamecenter)` logged.
 - **Depends on:** 3, 12, 14
 
-#### Step 16 — Sign in with Apple + Guest fallback screen · M
+#### Step 16 — Sign in with Apple + Guest fallback screen · M · ✅ code done (SignInPanel on MainMenu, sort 6, waits behind the daily reward popup; offered when signed in + anonymous + no earlier choice + Game Center finished without signing in. Apple: links the Apple ID (same PlayerId); if that Apple ID already has a player, switches to it. Guest: keeps the anonymous player, account_kind=guest. Choice stored in PlayerPrefs `cityblocks_signin_choice`. Editor test: panel shows, Apple → 'only on iPhone', Guest → sign_in(method=guest), never re-offered; iOS build OK. Left: 🧑 Apple's official logo in AppleButton/AppleLogo; device checkpoint)
 - **Files:** `AccountService.cs`; new `Assets/Scripts/UI/SignInPanel.cs`, `Assets/Prefabs/UI/SignInPanel.prefab`; `MainMenu.unity`.
 - **🔍 Checkpoint (device):** With Game Center signed out the panel appears once; Apple and Guest both work; the panel never shows again after a choice is made; `sign_in(method=apple|guest)` logged.
 - **⚠ Release gate:** Apple requires in-app account deletion once the app lets players create an account, so **no App Store submission may include this step until Step 45 (Delete Account) is done.** TestFlight is fine.

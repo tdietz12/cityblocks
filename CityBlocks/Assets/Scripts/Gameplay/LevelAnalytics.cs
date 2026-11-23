@@ -44,6 +44,9 @@ namespace Gameplay
             "is_first_launch", isFirstLaunch ? 1 : 0, "days_since_install", daysSinceInstall, "days_since_last_session", daysSinceLastSession);
         public static void SessionEnded(int durationSeconds, int levelsPlayed, string screen) => Record("session_end",
             "duration_s", durationSeconds, "levels_played", levelsPlayed, "screen", screen ?? "");
+        /// <summary>method: session (cached token), gamecenter or anonymous (Step 16 adds apple / guest).</summary>
+        public static void SignIn(string method, bool isNewPlayer) => Record("sign_in",
+            "method", method ?? "", "is_new_player", isNewPlayer ? 1 : 0);
         public static void LevelStarted(int level, int attempt, string attemptId) => Record("level_start",
             "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "");
         public static void LevelResumed(int level, int attempt, string attemptId, int movesRemaining) => Record("level_resume",
