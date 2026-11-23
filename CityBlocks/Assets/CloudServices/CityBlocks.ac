@@ -1,0 +1,19 @@
+{
+  "$schema": "https://ugs-config-schemas.unity3d.com/v1/project-access-policy.schema.json",
+  "statements": [
+    {
+      "Sid": "DenyPlayerCurrencyWrites",
+      "Effect": "Deny",
+      "Action": ["Write"],
+      "Principal": "Player",
+      "Resource": "urn:ugs:economy:/**/currencies**"
+    },
+    {
+      "Sid": "DenyPlayerInventoryWrites",
+      "Effect": "Deny",
+      "Action": ["Write"],
+      "Principal": "Player",
+      "Resource": "urn:ugs:economy:/**/inventory**"
+    }
+  ]
+}

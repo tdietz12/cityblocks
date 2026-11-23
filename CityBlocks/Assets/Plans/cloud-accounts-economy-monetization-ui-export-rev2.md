@@ -478,7 +478,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Deployment goes green; a Play Mode call logs the server time.
 - **Depends on:** 3
 
-#### Step 19 — Economy currencies & entitlement · S · ✅ code done (Assets/CloudServices/Economy/: COINS, PU_DELETE, PU_LOOKAHEAD, PU_LEVELUP, PU_EXTRATURNS (.ecc, initial 0, customData.powerUp = game enum name) + NO_ADS (.eci, customData.entitlement = no_ads). Left: 🧑 Deploy + check Dashboard ▸ Economy)
+#### Step 19 — Economy currencies & entitlement · S · ✅ code done (Assets/CloudServices/Economy/: COINS, PU_DELETE, PU_LOOKAHEAD, PU_LEVELUP, PU_EXTRATURNS (.ecc, initial 0, customData.powerUp = game enum name) + NO_ADS (.eci, customData.entitlement = no_ads). Deployed; visible in Dashboard ▸ Economy) · ✅ done
 - **Files:** `Assets/CloudServices/Economy/` → `COINS`, `PU_DELETE`, `PU_LOOKAHEAD`, `PU_LEVELUP`, `PU_EXTRATURNS`, inventory item `NO_ADS`.
 - **🔍 Checkpoint:** Deployed; visible in the Dashboard ▸ Economy.
 - **Depends on:** 18
@@ -486,7 +486,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 #### Step 20 — ~~Remote Config tuning values~~ · dropped (option B)
 - Tuning values (coin rewards, continue costs, welcome grant) are constants in the Cloud Code module. Remote Config can be added later if live tuning is wanted.
 
-#### Step 21 — Access Control policy · S
+#### Step 21 — Access Control policy · S · ✅ code done (Assets/CloudServices/CityBlocks.ac — targeted, not deny-all, so Analytics / crash reporting / sign-in are untouched: Player Write denied on `urn:ugs:economy:/**/currencies**` and `/**/inventory**`; reads, Apple purchase redemption, Cloud Save and Cloud Code allowed. ⚠ Cloud Code functions must write Economy with `context.ServiceToken` (player-token writes are refused). Debug: Tools ▸ City Blocks ▸ Cloud ▸ Log Economy Balances / Try Client Coin Increment. Deployed; Editor check: balances read OK (all 0), client COINS increment refused with Forbidden) · ✅ done
 - **Files:** `Assets/CloudServices/CityBlocks.ac` — players may read Economy and read/write their own Cloud Save progress; **Economy writes are denied to clients** (only Cloud Code can change balances).
 - **🔍 Checkpoint:** A debug call where the client tries to increment a balance itself is **refused**; sign-in, Cloud Save and Cloud Code calls still work.
 - **Depends on:** 19
