@@ -15,7 +15,7 @@
       }
     },
     "com.lupidan.apple-signin-unity": {
-      "version": "https://github.com/lupidan/apple-signin-unity.git?path=Source",
+      "version": "https://github.com/lupidan/apple-signin-unity.git?path=Source#017ba04d805ed37d783defa5266080c523f72582",
       "depth": 0,
       "source": "git",
       "dependencies": {},

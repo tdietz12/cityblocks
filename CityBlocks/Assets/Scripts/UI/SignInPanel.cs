@@ -74,7 +74,7 @@ namespace UI
             if (busy) return;
             busy = true;
             SetButtonsInteractable(false);
-            SetFeedback("Signing in…");
+            SetFeedback("Signing in...");
 
             AccountService.AppleSignInResult result = await AccountService.SignInWithAppleAsync();
             busy = false;
@@ -100,7 +100,7 @@ namespace UI
 
         private void OnGuestClicked()
         {
-            if (busy) return;
+            if (busy || !open) return;
             AccountService.ContinueAsGuest();
             Close();
         }

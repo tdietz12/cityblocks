@@ -54,6 +54,8 @@ namespace CityBlocks.EditorTests
                     "duration_s", 125, "levels_played", 4, "screen", "menu"),
                 C("SignIn", "sign_in", () => LevelAnalytics.SignIn("gamecenter", true),
                     "method", "gamecenter", "is_new_player", 1),
+                C("AccountLinked", "account_linked", () => LevelAnalytics.AccountLinked("apple", "settings"),
+                    "provider", "apple", "source", "settings"),
                 C("LevelStarted", "level_start", () => LevelAnalytics.LevelStarted(5, 2, "a1"),
                     "level_number", 5, "attempt_number", 2, "attempt_id", "a1"),
                 C("LevelResumed", "level_resume", () => LevelAnalytics.LevelResumed(5, 2, "a1", 7),

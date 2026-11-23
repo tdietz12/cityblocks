@@ -2,8 +2,8 @@
   "dependencies": {
     "com.apple.unityplugin.core": "file:Apple/com.apple.unityplugin.core-3.3.0.tgz",
     "com.apple.unityplugin.gamekit": "file:Apple/com.apple.unityplugin.gamekit-4.1.0.tgz",
-    "com.lupidan.apple-signin-unity":"https://github.com/lupidan/apple-signin-unity.git?path=Source",
-    "com.unity.2d.sprite": "1.0.0",
+    "com.lupidan.apple-signin-unity": "https://github.com/lupidan/apple-signin-unity.git?path=Source#017ba04d805ed37d783defa5266080c523f72582",
+"com.unity.2d.sprite": "1.0.0",
     "com.unity.ads": "4.19.0",
     "com.unity.ai.assistant": "2.22.0-pre.1",
 "com.unity.collab-proxy": "2.12.4",

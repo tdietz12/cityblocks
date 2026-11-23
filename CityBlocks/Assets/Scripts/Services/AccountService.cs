@@ -24,6 +24,7 @@ namespace CloudServices
 
         public enum GameCenterStatus { Unsupported, Pending, Authenticated, Failed }
         public enum AppleSignInResult { Success, Cancelled, Unsupported, Failed }
+        public enum LinkResult { Linked, AlreadyLinked, Cancelled, Unsupported, Failed }
 
         // Game Center's sign-in sheet can stay open indefinitely, so sign-in only waits this long before falling back.
         private const int GameCenterWaitMilliseconds = 6000;
@@ -34,6 +35,12 @@ namespace CloudServices
         private static Task<global::Apple.GameKit.GKLocalPlayer> gameCenterAuth;
         private static string cachedKind;
         private static global::AppleAuth.AppleAuthManager appleAuth;
+        private static bool appleLinked;
+        private static bool gameCenterLinked;
+        // Game Center is signed in on the device but already belongs to a different player (never force-linked).
+        private static bool gameCenterConflict;
+        // Apple identity token kept after an AccountAlreadyLinked result so the player can choose to switch.
+        private static string pendingAppleToken;
 
         /// <summary>Fires when the account kind changes (e.g. Game Center linked in the background).</summary>
         public static event Action<string> KindChanged;
@@ -44,6 +51,10 @@ namespace CloudServices
             gameCenterAuth = null;
             cachedKind = null;
             appleAuth = null;
+            appleLinked = false;
+            gameCenterLinked = false;
+            gameCenterConflict = false;
+            pendingAppleToken = null;
             KindChanged = null;
         }
 
@@ -62,6 +73,16 @@ namespace CloudServices
 
         public static bool HasMadeSignInChoice => PlayerPrefs.HasKey(ChoicePrefsKey);
 
+        public static bool IsAppleLinked => appleLinked;
+        public static bool IsGameCenterLinked => gameCenterLinked;
+        /// <summary>True when Game Center is signed in on this device but its account belongs to another player.</summary>
+        public static bool HasGameCenterConflict => gameCenterConflict && !gameCenterLinked;
+        public static string PlayerId => CloudBootstrap.IsSignedIn ? AuthenticationService.Instance.PlayerId : null;
+
+        /// <summary>The Game Center nickname when Game Center is signed in on this device, otherwise null.</summary>
+        public static string GameCenterAlias =>
+            GameCenter == GameCenterStatus.Authenticated ? gameCenterAuth.Result.Alias : null;
+
         /// <summary>
         /// True when the sign-in panel should be offered: signed in with no linked account, no earlier Apple/Guest
         /// choice, and Game Center has finished without signing in (cancelled / signed out on this device).
@@ -69,6 +90,7 @@ namespace CloudServices
         public static bool ShouldOfferSignIn =>
             CloudBootstrap.IsSignedIn && Kind == KindAnonymous && !HasMadeSignInChoice &&
             (GameCenter == GameCenterStatus.Failed || GameCenter == GameCenterStatus.Unsupported);
+
 
         /// <summary>Drives Sign in with Apple callbacks; call every frame (CloudBootstrap does).</summary>
         public static void Tick() => appleAuth?.Update();
@@ -166,6 +188,8 @@ namespace CloudServices
             {
                 PlayerInfo info = await AuthenticationService.Instance.GetPlayerInfoAsync();
                 bool hasGameCenter = !string.IsNullOrEmpty(info.GetAppleGameCenterId());
+                gameCenterLinked = hasGameCenter;
+                appleLinked = !string.IsNullOrEmpty(info.GetAppleId());
                 SetKind(KindFrom(info));
                 if (hasGameCenter) return;
 
@@ -176,13 +200,17 @@ namespace CloudServices
                 await AuthenticationService.Instance.LinkWithAppleGameCenterAsync(
                     Convert.ToBase64String(items.GetSignature()), player.TeamPlayerId, items.PublicKeyUrl,
                     Convert.ToBase64String(items.GetSalt()), items.Timestamp);
+                gameCenterLinked = true;
+                gameCenterConflict = false;
                 SetKind(KindGameCenter);
+                Gameplay.LevelAnalytics.AccountLinked(KindGameCenter, "background");
                 Debug.Log("[AccountService] Linked Game Center to PlayerId=" + AuthenticationService.Instance.PlayerId);
             }
             catch (AuthenticationException exception) when (exception.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
             {
-                // This Game Center account already belongs to another player. Never force-link; Step 17 offers
-                // a "Switch to that account?" choice.
+                // This Game Center account already belongs to another player. Never force-link; Account Settings
+                // offers a "Switch to that account?" choice.
+                gameCenterConflict = true;
                 Debug.LogWarning("[AccountService] Game Center is already linked to a different player; not linking.");
             }
             catch (Exception exception)
@@ -216,6 +244,8 @@ namespace CloudServices
                     try
                     {
                         await AuthenticationService.Instance.LinkWithAppleAsync(idToken);
+                        appleLinked = true;
+                        Gameplay.LevelAnalytics.AccountLinked(KindApple, "signin_panel");
                         Debug.Log("[AccountService] Linked Apple ID to PlayerId=" + AuthenticationService.Instance.PlayerId);
                     }
                     catch (AuthenticationException exception) when (exception.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
@@ -240,6 +270,93 @@ namespace CloudServices
             {
                 Debug.LogWarning("[AccountService] Could not sign in with the Apple ID: " + exception.Message);
                 return AppleSignInResult.Failed;
+            }
+        }
+
+        /// <summary>
+        /// Account Settings: links Sign in with Apple to the current player. Unlike the first-run panel this never
+        /// switches automatically; if the Apple ID already belongs to another player it returns AlreadyLinked and keeps
+        /// the token so SwitchToAppleAccountAsync can be offered.
+        /// </summary>
+        public static async Task<LinkResult> LinkAppleAsync()
+        {
+            string idToken;
+            try { idToken = await RequestAppleIdTokenAsync(); }
+            catch (TaskCanceledException) { return LinkResult.Cancelled; }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[AccountService] Sign in with Apple failed: " + exception.Message);
+                return LinkResult.Failed;
+            }
+            if (idToken == null) return LinkResult.Unsupported;
+            if (!CloudBootstrap.IsSignedIn) return LinkResult.Failed;
+
+            try
+            {
+                await AuthenticationService.Instance.LinkWithAppleAsync(idToken);
+                appleLinked = true;
+                pendingAppleToken = null;
+                SaveChoice(KindApple);
+                SetKind(gameCenterLinked ? KindGameCenter : KindApple);
+                Gameplay.LevelAnalytics.AccountLinked(KindApple, "settings");
+                Debug.Log("[AccountService] Linked Apple ID to PlayerId=" + AuthenticationService.Instance.PlayerId);
+                return LinkResult.Linked;
+            }
+            catch (AuthenticationException exception) when (exception.ErrorCode == AuthenticationErrorCodes.AccountAlreadyLinked)
+            {
+                pendingAppleToken = idToken;
+                return LinkResult.AlreadyLinked;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[AccountService] Could not link the Apple ID: " + exception.Message);
+                return LinkResult.Failed;
+            }
+        }
+
+        /// <summary>Signs out of the current player and into the player that owns the Apple ID from LinkAppleAsync.</summary>
+        public static Task<bool> SwitchToAppleAccountAsync()
+        {
+            string token = pendingAppleToken;
+            if (string.IsNullOrEmpty(token)) return Task.FromResult(false);
+            return SwitchAsync(KindApple, () => AuthenticationService.Instance.SignInWithAppleAsync(token));
+        }
+
+        /// <summary>Signs out of the current player and into the player that owns this device's Game Center account.</summary>
+        public static async Task<bool> SwitchToGameCenterAccountAsync()
+        {
+            global::Apple.GameKit.GKLocalPlayer player = await WaitForGameCenterAsync(0);
+            if (player == null) return false;
+            return await SwitchAsync(KindGameCenter, () => SignInWithGameCenterAsync(player));
+        }
+
+        /// <summary>
+        /// Replaces the current player with another existing one. The current player's credentials are cleared, so a
+        /// guest account is left behind; local progress stays on the device. If signing in to the other player fails,
+        /// falls back to the normal sign-in so the game is never left signed out.
+        /// </summary>
+        private static async Task<bool> SwitchAsync(string kind, Func<Task> signIn)
+        {
+            string previousPlayer = PlayerId;
+            try
+            {
+                AuthenticationService.Instance.SignOut(true);
+                await signIn();
+                pendingAppleToken = null;
+                if (kind == KindGameCenter) { gameCenterConflict = false; gameCenterLinked = true; }
+                if (kind == KindApple) appleLinked = true;
+                SaveChoice(kind);
+                SetKind(kind);
+                Debug.Log("[AccountService] Switched from PlayerId=" + previousPlayer + " to " + AuthenticationService.Instance.PlayerId + " via " + kind);
+                LogSignedIn(kind, false);
+                _ = RefreshKindAndLinkGameCenterAsync();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[AccountService] Could not switch account: " + exception.Message);
+                if (!CloudBootstrap.IsSignedIn) await CloudBootstrap.EnsureSignedInAsync();
+                return false;
             }
         }
 

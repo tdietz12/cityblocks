@@ -47,6 +47,9 @@ namespace Gameplay
         /// <summary>method: session (cached token), gamecenter or anonymous (Step 16 adds apple / guest).</summary>
         public static void SignIn(string method, bool isNewPlayer) => Record("sign_in",
             "method", method ?? "", "is_new_player", isNewPlayer ? 1 : 0);
+        /// <summary>provider: apple or gamecenter. source: settings, signin_panel or background (Game Center auto-link).</summary>
+        public static void AccountLinked(string provider, string source) => Record("account_linked",
+            "provider", provider ?? "", "source", source ?? "");
         public static void LevelStarted(int level, int attempt, string attemptId) => Record("level_start",
             "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "");
         public static void LevelResumed(int level, int attempt, string attemptId, int movesRemaining) => Record("level_resume",
