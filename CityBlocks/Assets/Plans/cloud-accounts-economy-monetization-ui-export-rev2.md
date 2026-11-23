@@ -472,13 +472,13 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 ## Milestone D — Cloud backend skeleton (option B: no heartbeat)
 > **Decision (backend option B):** single-player game, so no periodic Heartbeat. Player data lives in **Cloud Save** (progress, written by the client) and **Economy** (coins, power-ups, no-ads — **only Cloud Code can change them**, enforced by Access Control). A few small Cloud Code functions do the trusted work: welcome grant, use a power-up, level coin rewards, daily reward (server clock). Purchases are validated by Economy. Online state is checked on events (launch, resume, connection change, before store / power-up use), not by polling.
 
-#### Step 18 — Cloud Code module scaffold + `GetServerTime` · M · ✅ code done (CityBlocksCCM/: net9.0 module `CityBlocks` with PlayerModule.GetServerTime (ISO 8601 UTC), ModuleSetup, linux-x64 FolderProfile, NUnit tests (RollForward=Major so they run on the installed .NET 10), .gitignore; Assets/CloudCode/CityBlocks.ccmr; client `CloudServices.CloudFunctions.GetServerTimeAsync()`; Tools ▸ City Blocks ▸ Cloud ▸ Log Server Time. Left: 🧑 Deploy, then Play Mode check)
+#### Step 18 — Cloud Code module scaffold + `GetServerTime` · M · ✅ code done (CityBlocksCCM/: net9.0 module `CityBlocks` with PlayerModule.GetServerTime (ISO 8601 UTC), ModuleSetup, linux-x64 FolderProfile, NUnit tests (RollForward=Major so they run on the installed .NET 10), .gitignore; Assets/CloudCode/CityBlocks.ccmr; client `CloudServices.CloudFunctions.GetServerTimeAsync()`; Tools ▸ City Blocks ▸ Cloud ▸ Log Server Time. Deployed to development; Play Mode GetServerTime verified) · ✅ done
 - **Files:** `CityBlocksCCM/**` (sln, csproj, ModuleSetup, PlayerModule with `GetServerTime`, FolderProfile.pubxml, .gitignore, tests), `Assets/CloudCode/CityBlocks.ccmr`, generated bindings.
 - **🧑 You:** install the .NET SDK if missing; press Deploy in Services ▸ Deployment.
 - **🔍 Checkpoint:** Deployment goes green; a Play Mode call logs the server time.
 - **Depends on:** 3
 
-#### Step 19 — Economy currencies & entitlement · S
+#### Step 19 — Economy currencies & entitlement · S · ✅ code done (Assets/CloudServices/Economy/: COINS, PU_DELETE, PU_LOOKAHEAD, PU_LEVELUP, PU_EXTRATURNS (.ecc, initial 0, customData.powerUp = game enum name) + NO_ADS (.eci, customData.entitlement = no_ads). Left: 🧑 Deploy + check Dashboard ▸ Economy)
 - **Files:** `Assets/CloudServices/Economy/` → `COINS`, `PU_DELETE`, `PU_LOOKAHEAD`, `PU_LEVELUP`, `PU_EXTRATURNS`, inventory item `NO_ADS`.
 - **🔍 Checkpoint:** Deployed; visible in the Dashboard ▸ Economy.
 - **Depends on:** 18

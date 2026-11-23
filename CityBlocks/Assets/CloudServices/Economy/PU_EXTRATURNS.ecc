@@ -1,0 +1,6 @@
+{
+  "$schema": "https://ugs-config-schemas.unity3d.com/v1/economy/economy-currency.schema.json",
+  "name": "Extra Turns (power-up)",
+  "initial": 0,
+  "customData": { "powerUp": "extraTurns" }
+}
