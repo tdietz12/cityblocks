@@ -381,7 +381,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Compiles with no errors/warnings; no `Firebase` references anywhere in `Assets`; an iOS build no longer pulls Firebase pods (verify on the next device build).
 - **Depends on:** 4 + your confirmation that UGS events are arriving
 
-#### Step 5b — Unity Cloud crash & exception reporting · S (🧑 partly you) · *added in rev. 2 (replaces Crashlytics)* · ✅ done (test exception with player metadata confirmed in Cloud Diagnostics; device symbol check pending first TestFlight build)
+#### Step 5b — Unity Cloud crash & exception reporting · S (🧑 partly you) · *added in rev. 2 (replaces Crashlytics)* · ✅ done (test exception with player metadata confirmed in Cloud Diagnostics; device symbol check skipped by decision)
 - **🧑 You:** Window ▸ General ▸ Services ▸ **Cloud Diagnostics** ▸ turn on **Crash and Exception Reporting** (and enable Cloud Diagnostics for CityBlocks in the Dashboard if asked).
 - **Files:** `CloudBootstrap.cs` (after sign-in: `UnityEngine.CloudDiagnostics.CrashReportHandler.SetUserMetadata` with `player_id`, `environment`, `account_kind` so crashes can be matched to analytics players); temporary debug menu item to throw a test exception (removed afterwards).
 - **Notes:** check that iOS symbol upload is enabled so native crash stacks are readable; check which free-tier limits apply on the UGS pricing page before launch.
@@ -424,7 +424,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Opening the app from the daily notification logs `notification_opened`; skipping a day (simulated in the Editor by moving the stored last-claim date) logs `daily_streak_broken`.
 - **Depends on:** 4
 
-#### Step 11 — Store & ads audit, event tests, Event Manager registration · S (🧑 partly you) · ✅ code done (audit fixes: combined store panel also logs view_item for no_ads; ad_load_failed error_code prefixed load:/show:; booster_id null guard. ad_impression → UGS built-in `adImpression` via `AnalyticsSink.RecordStandard`, sent once per ad when it closes, with completion/click/watch time and placement `return_to_menu`/`after_win`. StoreProviderBridge deleted (unused, would double-send purchase). Tools ▸ City Blocks ▸ Tests ▸ Level Analytics Checks passes 1177 checks. Left: 🧑 final Event Manager registration check + 10-min device session)
+#### Step 11 — Store & ads audit, event tests, Event Manager registration · S (🧑 partly you) · ✅ code done (audit fixes: combined store panel also logs view_item for no_ads; ad_load_failed error_code prefixed load:/show:; booster_id null guard. ad_impression → UGS built-in `adImpression` via `AnalyticsSink.RecordStandard`, sent once per ad when it closes, with completion/click/watch time and placement `return_to_menu`/`after_win`. StoreProviderBridge deleted (unused, would double-send purchase). Tools ▸ City Blocks ▸ Tests ▸ Level Analytics Checks passes 1177 checks. Device session confirmed events arrive valid. Ads, notifications and store aren't set up yet, so `adImpression`/`ad_load_failed`, `notification_opened` and store events get re-checked when those features are configured) · ✅ done
 - **Files:** `StoreOfferWindow.cs`, `UnityAdsProvider.cs`, `StoreProviderBridge.cs` (check that every existing store/ad event goes through `LevelAnalytics` with consistent params; nothing calls a backend directly); new `Assets/Editor/Tests/LevelAnalyticsTests.cs` (every public `LevelAnalytics` method → expected name + params via `EventRecorded`).
 - **🧑 You:** register all Milestone B events + parameters in Dashboard ▸ Analytics ▸ Event Manager (I'll give you a copy-paste table of event names, parameter names and types).
 - **🔍 Checkpoint:** Tests pass; after a 10-minute play session on device, every event from Steps 6–10 appears in the UGS Event Browser with no "invalid event" entries.
@@ -435,6 +435,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 ## Milestone C — Accounts
 
 #### Step 12 — Apple account setup · 🧑 You · S
+- **Bundle ID:** keep `com.Unity-Technologies.com.unity.template.CityBlocks`. The app is already live on the App Store under it, so changing it would make a separate app. Every build is an update: its version/build must be higher than the live release.
 - **Do:** App Store Connect: enable the Game Center and Sign in with Apple capabilities for the bundle ID. Unity Dashboard ▸ Authentication ▸ Identity Providers: add **Apple** and **Apple Game Center**.
 - **🔍 Checkpoint:** Both providers show as enabled in the Dashboard.
 - **Depends on:** 1
