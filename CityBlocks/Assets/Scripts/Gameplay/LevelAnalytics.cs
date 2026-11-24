@@ -24,14 +24,14 @@ namespace Gameplay
         }
 
         /// <summary>
-        /// Parameters attached to every event. is_online is reachability-only until the heartbeat (Step 24);
+        /// Parameters attached to every event. is_online comes from ConnectivityService (reachable + signed in + last cloud call OK);
         /// account_kind becomes gamecenter/apple/guest in Step 15. Call-site values with the same key win.
         /// </summary>
         private static void AddCommonParameters(Dictionary<string, object> parameters)
         {
             AddIfMissing(parameters, "player_level_max", LevelProgressStore.HighestUnlockedLevel);
             AddIfMissing(parameters, "session_number", CloudServices.SessionTracker.SessionNumber);
-            AddIfMissing(parameters, "is_online", Application.internetReachability != NetworkReachability.NotReachable ? 1 : 0);
+            AddIfMissing(parameters, "is_online", CloudServices.ConnectivityService.IsOnline ? 1 : 0);
             AddIfMissing(parameters, "account_kind", CloudServices.CloudBootstrap.AccountKind);
         }
 
@@ -97,8 +97,14 @@ namespace Gameplay
         public static void BoosterUsed(string boosterId, int level, int attempt, bool endless, string attemptId, int balanceAfter) => Record("booster_used",
             "booster_id", boosterId ?? "", "level_number", level, "attempt_number", attempt, "is_endless_level", endless ? 1 : 0,
             "attempt_id", attemptId ?? "", "balance_after", balanceAfter);
-public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
+        public static void PowerUpGranted(GameController.PowerUpType type, int amount, string source, int balanceAfter) => Record("powerup_granted",
             "booster_id", BoosterId(type), "amount", amount, "source", source ?? "", "balance_after", balanceAfter);
+        /// <summary>Coins were added by the cloud. source: welcome, level_win, daily, purchase. balanceAfter from the server response.</summary>
+        public static void CoinsEarned(int amount, string source, int balanceAfter) => Record("coins_earned",
+            "amount", amount, "source", source ?? "", "balance_after", balanceAfter);
+        /// <summary>Online state flipped. state: online / offline. reason: launch, resume, reachability, retry, action, call. durationSeconds: time spent in the previous state.</summary>
+        public static void OfflineModeChanged(string state, string reason, int durationSeconds) => Record("offline_mode_changed",
+            "state", state ?? "", "reason", reason ?? "", "duration_s", durationSeconds);
         /// <summary>A continue (extra moves) was shown on the loss screen. continueIndex: 1 = first continue in this attempt.</summary>
         public static void ContinueOffered(int level, int attempt, string attemptId, int continueIndex, int movesOffered) => Record("continue_offered",
             "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "continue_index", continueIndex, "moves_offered", movesOffered);

@@ -350,6 +350,7 @@ namespace CloudServices
                 Debug.Log("[AccountService] Switched from PlayerId=" + previousPlayer + " to " + AuthenticationService.Instance.PlayerId + " via " + kind);
                 LogSignedIn(kind, false);
                 _ = RefreshKindAndLinkGameCenterAsync();
+                _ = PlayerWallet.RefreshAsync();
                 return true;
             }
             catch (Exception exception)

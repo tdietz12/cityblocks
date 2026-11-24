@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Threading.Tasks;
 using Unity.Services.CloudCode;
@@ -14,6 +15,39 @@ namespace CloudServices
     {
         /// <summary>Module name = file name of the .ccmr reference.</summary>
         public const string ModuleName = "CityBlocks";
+
+        /// <summary>
+        /// Calls Bootstrap: grants the welcome bundle once (server side), migrates local power-ups once when
+        /// <paramref name="legacyPowerUps"/> is given (game name → count; sent from Step 26 on), and returns balances.
+        /// Logs coins_earned / powerup_granted for anything this call granted. Null if offline / failed.
+        /// </summary>
+        public static async Task<PlayerSnapshot> BootstrapAsync(Dictionary<string, int> legacyPowerUps = null)
+        {
+            if (!await CloudBootstrap.EnsureSignedInAsync()) return null;
+            var args = new Dictionary<string, object>();
+            if (legacyPowerUps != null) args["legacyPowerUps"] = legacyPowerUps;
+            try
+            {
+                PlayerSnapshot snapshot = await CloudCodeService.Instance.CallModuleEndpointAsync<PlayerSnapshot>(ModuleName, "Bootstrap", args);
+                if (snapshot == null) return null;
+                if (snapshot.WelcomeCoinsGranted > 0)
+                    Gameplay.LevelAnalytics.CoinsEarned((int)snapshot.WelcomeCoinsGranted, "welcome", (int)snapshot.Coins);
+                if (snapshot.Migrated != null)
+                {
+                    foreach (var moved in snapshot.Migrated)
+                    {
+                        if (moved.Value <= 0 || !Enum.TryParse(moved.Key, true, out Gameplay.GameController.PowerUpType type)) continue;
+                        Gameplay.LevelAnalytics.PowerUpGranted(type, (int)moved.Value, "migration", (int)snapshot.PowerUp(moved.Key));
+                    }
+                }
+                return snapshot;
+            }
+            catch (CloudCodeException exception)
+            {
+                Debug.LogWarning("[CloudFunctions] Bootstrap failed (" + exception.Reason + "): " + exception.Message);
+                return null;
+            }
+        }
 
         /// <summary>Server time in UTC, or null if offline / the call failed.</summary>
         public static async Task<DateTime?> GetServerTimeAsync()

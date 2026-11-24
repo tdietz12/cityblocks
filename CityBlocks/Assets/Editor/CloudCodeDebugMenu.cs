@@ -16,6 +16,7 @@ namespace CityBlocks.EditorTools
                 Debug.LogWarning("[CloudCode] Enter Play Mode first (the call needs the game's signed-in player).");
                 return;
             }
+            Debug.Log("[CloudCode] GetServerTime started at " + DateTime.Now.ToString("HH:mm:ss") + "...");
             DateTime? serverTime = await CloudFunctions.GetServerTimeAsync();
             if (serverTime == null)
             {
@@ -32,6 +33,7 @@ namespace CityBlocks.EditorTools
         private static async void LogBalances()
         {
             if (!EditorApplication.isPlaying) { Debug.LogWarning("[Economy] Enter Play Mode first."); return; }
+            Debug.Log("[Economy] Reading balances, started at " + DateTime.Now.ToString("HH:mm:ss") + "...");
             if (!await CloudBootstrap.EnsureSignedInAsync()) { Debug.LogWarning("[Economy] Not signed in."); return; }
             try
             {
@@ -54,6 +56,7 @@ namespace CityBlocks.EditorTools
         private static async void TryClientCoinIncrement()
         {
             if (!EditorApplication.isPlaying) { Debug.LogWarning("[Economy] Enter Play Mode first."); return; }
+            Debug.Log("[Economy] Trying a client coin increment (should be refused), started at " + DateTime.Now.ToString("HH:mm:ss") + "...");
             if (!await CloudBootstrap.EnsureSignedInAsync()) { Debug.LogWarning("[Economy] Not signed in."); return; }
             try
             {
@@ -68,6 +71,28 @@ namespace CityBlocks.EditorTools
                 else Debug.LogWarning("[Economy] Increment failed for another reason (" + exception.Reason + ", code " + exception.ErrorCode + "): " + exception.Message);
                 SessionState.SetString("Economy.LastWriteCheck", (refused ? "refused: " : "other: ") + exception.Reason + " " + exception.ErrorCode);
             }
+        }
+
+        [MenuItem("Tools/City Blocks/Cloud/Run Bootstrap")]
+        private static async void RunBootstrap()
+        {
+            if (!EditorApplication.isPlaying) { Debug.LogWarning("[Bootstrap] Enter Play Mode first."); return; }
+            Debug.Log("[Bootstrap] Started at " + DateTime.Now.ToString("HH:mm:ss") + " (first call after a deploy or 15 min idle can take ~15-30 s)...");
+            float started = Time.realtimeSinceStartup;
+            PlayerSnapshot snapshot = await CloudFunctions.BootstrapAsync();
+            float seconds = Time.realtimeSinceStartup - started;
+            if (snapshot == null)
+            {
+                Debug.LogWarning("[Bootstrap] Failed after " + seconds.ToString("F1") + " s — is the module deployed?");
+                SessionState.SetString("Bootstrap.Last", "failed");
+                return;
+            }
+            var parts = new System.Collections.Generic.List<string>();
+            foreach (var p in snapshot.PowerUps) parts.Add(p.Key + "=" + p.Value);
+            string line = "coins=" + snapshot.Coins + ", power-ups: " + string.Join(", ", parts) + ", adsRemoved=" + snapshot.AdsRemoved +
+                          ", welcomeGranted=" + snapshot.WelcomeCoinsGranted + ", migrated=" + (snapshot.Migrated?.Count ?? 0) + " types, serverTime=" + snapshot.ServerTimeUtc;
+            Debug.Log("[Bootstrap] " + line + " (" + seconds.ToString("F1") + " s)");
+            SessionState.SetString("Bootstrap.Last", line + " (" + seconds.ToString("F1") + " s)");
         }
     }
 }

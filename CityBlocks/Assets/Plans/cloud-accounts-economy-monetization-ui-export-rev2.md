@@ -491,7 +491,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** A debug call where the client tries to increment a balance itself is **refused**; sign-in, Cloud Save and Cloud Code calls still work.
 - **Depends on:** 19
 
-#### Step 22 — `Bootstrap` endpoint (welcome grant + legacy migration + snapshot) · M
+#### Step 22 — `Bootstrap` endpoint (welcome grant + legacy migration + snapshot) · M · ✅ code done (Welcome bundle = **500 coins only** — power-ups come from level-up rewards. Legacy migration capped at 20 per power-up; server-side ready, the client starts sending local counts in Step 26 to avoid double counting before the switch-over. One-time flags in Protected Cloud Save keys `welcome_granted` / `legacy_migrated`; all Economy writes use the service token. Module: Rules.cs (+ RulesTests), BootstrapResult.cs, PlayerModule.Bootstrap. Client: PlayerSnapshot, CloudFunctions.BootstrapAsync (logs `coins_earned(source=welcome)` / `powerup_granted(source=migration)`), Tools ▸ City Blocks ▸ Cloud ▸ Run Bootstrap. New event `coins_earned`. Deployed; Editor: 1st call coins=500 welcomeGranted=500, 2nd call welcomeGranted=0; first call after deploy ~14 s (Cloud Code cold start)) · ✅ done
 - **Files:** `PlayerModule.cs` + tests; client `PlayerSnapshot` DTO.
 - **Behavior:** First call per player grants the welcome bundle once and, for players updating from the live version, migrates their local power-up counts (capped) into Economy once. Returns coins, power-ups, no-ads and server time.
 - **🔍 Checkpoint:** A new player receives the welcome bundle exactly once; an existing install keeps its local power-ups (now in the cloud); `powerup_granted(source=welcome|migration)` / `coins_earned(source=welcome)` logged from the response.
@@ -501,12 +501,15 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ## Milestone E — Cloud wallet & connectivity (display only)
 
-#### Step 23 — `PlayerWallet` cache + coin chip · M
+#### Step 23 — `PlayerWallet` cache + coin chip · M · ✅ code done (PlayerWallet: last Bootstrap snapshot, cached per player in PlayerPrefs `cityblocks_wallet_cache`, `Changed` event; refreshed once after sign-in and after an account switch (Step 24 moves this to ConnectivityService). CoinChipUI on MainMenu StartPanel ▸ TopBar ▸ Coins (replaces the static "1,250"; dash until known). In-level PlayPanel chip deferred to Milestone I (no coin use in levels until coin continues). Editor: chip shows 500 after sign-in; cache saved)
 - **Files:** new `PlayerWallet.cs`, `CoinChipUI.cs`; coin chip on the MainMenu and the `LevelRulesUI.prefab` PlayPanel. Power-ups still use the local inventory at this point.
 - **🔍 Checkpoint:** The chip shows the cloud balance after launch and the last cached value when offline.
 - **Depends on:** 22
 
-#### Step 24 — `ConnectivityService` + offline indicator · M
+#### Step 24 — `ConnectivityService` + offline indicator · M · 🟡 implemented; device checks pending
+- **Implementation status:** ConnectivityService probes Bootstrap on launch/resume/reachability change and retries every 30 seconds while offline; no periodic online heartbeat. OfflineIndicator prefab is wired in MainMenu TopBar. Currently optimistic until the first completed cloud check. Step 26 wires power-up/store restrictions; they are not locked by this step.
+- **Verified:** previous Play Mode check showed cached coins=500, simulated failure showed the badge and offline_mode_changed(state=offline, is_online=0); badge screenshot checked. Latest analytics checks: 1299 passed; iOS export succeeded with 0 errors.
+- **Remaining verification:** real airplane-mode/reconnect and resume wallet refresh on device; automatic retry was not reliably verified because the previous test was interrupted. Existing AnalyticsSink service-shutdown warning also appears during Edit Mode analytics checks; event payload checks pass, but that warning is not fixed here.
 - **Files:** new `ConnectivityService.cs`, `OfflineIndicatorUI.cs`; `LevelAnalytics.cs` (`offline_mode_changed`; the `is_online` common param now comes from `ConnectivityService`).
 - **Behavior:** Online = device reachable + signed in + last cloud call succeeded. Re-checked on launch, on resume, when reachability changes and right before store / power-up use; while offline, retries every 30 s. Each successful check on launch / resume refreshes `PlayerWallet` (calls `Bootstrap`). No periodic polling while online.
 - **🔍 Checkpoint:** Airplane mode → offline badge appears within a few seconds (or at the next action) and clears after reconnecting; `offline_mode_changed` logged; a Dashboard balance change shows up after backgrounding and resuming the app.
