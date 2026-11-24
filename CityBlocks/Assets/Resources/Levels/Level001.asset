@@ -56,3 +56,9 @@ MonoBehaviour:
   tutorialSteps:
   - {fileID: 3468878906791932018, guid: 87fbd168c5c504a259f04cb1c9b75199, type: 3}
   showAdAfterWin: 0
+  firstWinRewards:
+    coins: 20
+    deleteUses: 0
+    levelUpUses: 0
+    lookAheadUses: 0
+    extraTurnsUses: 0

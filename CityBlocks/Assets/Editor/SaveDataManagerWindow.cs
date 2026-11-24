@@ -330,6 +330,11 @@ public static void RefreshActiveUI()
         private bool resetPowerUps = false;
         private bool clearEndlessSave = true;
         private bool clearPlayerPrefsAndStreaks = false;
+        private bool resetTargetLevelReward = false;
+        private bool settingPlayerLevel;
+        // Deliberately not serialized or saved to EditorPrefs/PlayerPrefs.
+        private string rewardResetKeyId = "";
+        private string rewardResetKeySecret = "";
         private int claimableDay = 2;
 
         private string statusMessage = "";
@@ -352,6 +357,72 @@ public static void RefreshActiveUI()
             }
             completeTutorial = targetLevel > 1;
             markPreviousCompleted = targetLevel > 1;
+        }
+
+        private string CurrentRewardResetPlayerId()
+        {
+            string signedInPlayer = CloudServices.AccountService.PlayerId;
+            if (!string.IsNullOrEmpty(signedInPlayer)) return signedInPlayer;
+            string cache = PlayerPrefs.GetString("cityblocks_wallet_cache", "");
+            if (string.IsNullOrEmpty(cache)) return null;
+            try { return (string)Newtonsoft.Json.Linq.JObject.Parse(cache)["playerId"]; }
+            catch (Exception) { return null; }
+        }
+
+        private async void SetPlayerLevelWithRewardReset()
+        {
+            if (settingPlayerLevel) return;
+            int level = targetLevel;
+            bool previousCompleted = markPreviousCompleted;
+            bool tutorialCompleted = completeTutorial;
+            bool powerUpsReset = resetPowerUps;
+            bool endlessCleared = clearEndlessSave;
+            bool prefsCleared = clearPlayerPrefsAndStreaks;
+            bool resetReward = resetTargetLevelReward;
+            string playerId = CurrentRewardResetPlayerId();
+            string keyId = rewardResetKeyId;
+            string secret = rewardResetKeySecret;
+            settingPlayerLevel = true;
+            statusMessage = resetReward ? "Resetting selected level reward in development..." : "Setting player level...";
+            statusMessageType = MessageType.Info;
+            Repaint();
+            try
+            {
+                string cloudMessage = "";
+                if (resetReward)
+                {
+                    cloudMessage = await CityBlocks.EditorTools.LevelRewardResetAdmin.ResetAsync(playerId, level, keyId, secret);
+                    if (this == null) return;
+                    if (CurrentRewardResetPlayerId() != playerId)
+                        throw new InvalidOperationException("The active player changed during the reset. Local progression was not changed.");
+                }
+                SaveDataEditorMenu.ResetPlayerToLevel(
+                    targetLevel: level,
+                    markPreviousCompleted: previousCompleted,
+                    completeTutorial: tutorialCompleted,
+                    resetPowerUps: powerUpsReset,
+                    clearEndlessSave: endlessCleared,
+                    clearPlayerPrefsAndStreaks: prefsCleared,
+                    showDialog: false);
+                statusMessage = $"Player successfully set to Level {level}!" + (resetReward ? "\n" + cloudMessage : "");
+                statusMessageType = MessageType.Info;
+            }
+            catch (Exception exception)
+            {
+                if (this == null) return;
+                // Do not print credential-bearing HTTP bodies or tokens to the Console.
+                statusMessage = "Player setup failed: " + exception.Message;
+                statusMessageType = MessageType.Error;
+            }
+            finally
+            {
+                if (this != null)
+                {
+                    rewardResetKeySecret = "";
+                    settingPlayerLevel = false;
+                    Repaint();
+                }
+            }
         }
 
         private void OnGUI()
@@ -415,6 +486,18 @@ public static void RefreshActiveUI()
             EditorGUILayout.Space(8);
             EditorGUILayout.LabelField("Progression Options", EditorStyles.miniBoldLabel);
 
+            resetTargetLevelReward = EditorGUILayout.Toggle(
+                new GUIContent("Reset Target Level Reward", "Make only this level's first-win reward claimable again in development. Does not remove coins or power-ups."),
+                resetTargetLevelReward);
+            if (resetTargetLevelReward)
+            {
+                EditorGUILayout.HelpBox("Development only. Cloud reset runs first; local level setup is cancelled if it fails. Other progression options below keep their existing behavior.", MessageType.Info);
+                EditorGUILayout.LabelField("Cloud Player ID", CurrentRewardResetPlayerId() ?? "Unknown — sign in once in Play Mode");
+                rewardResetKeyId = EditorGUILayout.TextField("Service Account Key ID", rewardResetKeyId);
+                rewardResetKeySecret = EditorGUILayout.PasswordField("Key Secret", rewardResetKeySecret);
+                EditorGUILayout.LabelField("Credentials are not saved. Secret is cleared after each attempt.", EditorStyles.wordWrappedMiniLabel);
+            }
+
             markPreviousCompleted = EditorGUILayout.Toggle(
                 new GUIContent("Mark Prior Levels Done", "Marks levels 1 through (Target - 1) as completed. Unlocks Endless mode (requires Level 3)."),
                 markPreviousCompleted
@@ -446,20 +529,10 @@ public static void RefreshActiveUI()
 
             // Primary Action: Set to Level
             GUI.backgroundColor = new Color(0.4f, 0.85f, 0.4f);
-            if (GUILayout.Button($"Set Player to Level {targetLevel}", GUILayout.Height(36)))
+            using (new EditorGUI.DisabledScope(settingPlayerLevel))
             {
-                SaveDataEditorMenu.ResetPlayerToLevel(
-                    targetLevel: targetLevel,
-                    markPreviousCompleted: markPreviousCompleted,
-                    completeTutorial: completeTutorial,
-                    resetPowerUps: resetPowerUps,
-                    clearEndlessSave: clearEndlessSave,
-                    clearPlayerPrefsAndStreaks: clearPlayerPrefsAndStreaks,
-                    showDialog: false
-                );
-                statusMessage = $"Player successfully set to Level {targetLevel}!";
-                statusMessageType = MessageType.Info;
-                Repaint();
+                if (GUILayout.Button(settingPlayerLevel ? "Setting player level..." : $"Set Player to Level {targetLevel}", GUILayout.Height(36)))
+                    SetPlayerLevelWithRewardReset();
             }
             GUI.backgroundColor = Color.white;
 

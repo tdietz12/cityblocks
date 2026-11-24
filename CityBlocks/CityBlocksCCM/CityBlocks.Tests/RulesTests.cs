@@ -36,7 +36,7 @@ namespace CityBlocks.Tests
         [Test]
         public void EveryPowerUpMapsToACurrency()
         {
-            CollectionAssert.AreEquivalent(new[] { "PU_DELETE", "PU_LOOKAHEAD", "PU_LEVELUP", "PU_EXTRATURNS" }, EconomyIds.PowerUpCurrencies.Values);
+            Assert.That(EconomyIds.PowerUpCurrencies.Values, Is.EquivalentTo(new[] { "PU_DELETE", "PU_LOOKAHEAD", "PU_LEVELUP", "PU_EXTRATURNS" }));
         }
     }
 }

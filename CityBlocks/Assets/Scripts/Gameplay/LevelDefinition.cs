@@ -85,6 +85,10 @@ namespace Gameplay
         public List<GameObject> tutorialSteps = new List<GameObject>();
         public bool showAdAfterWin;
 
+        [Header("First Win Rewards")]
+        [Tooltip("Granted once per player for the first win of this level; replays do not grant these rewards. Export and deploy reward configuration after editing.")]
+        public RewardAmounts firstWinRewards = new RewardAmounts();
+
         public void ResizeGrid(int newCols, int newRows)
         {
             newCols = Mathf.Clamp(newCols, 3, 7);

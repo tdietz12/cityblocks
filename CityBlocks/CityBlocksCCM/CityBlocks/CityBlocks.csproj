@@ -13,6 +13,10 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
     </ItemGroup>
 
+    <ItemGroup>
+        <EmbeddedResource Include="RewardConfiguration.json" LogicalName="CityBlocks.RewardConfiguration.json" />
+    </ItemGroup>
+
     <PropertyGroup>
         <PublishReadyToRunComposite>true</PublishReadyToRunComposite>
     </PropertyGroup>

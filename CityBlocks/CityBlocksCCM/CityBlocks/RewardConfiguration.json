@@ -1,0 +1,1057 @@
+{
+    "schemaVersion": 1,
+    "firstWinOnly": true,
+    "levels": [
+        {
+            "levelNumber": 1,
+            "rewards": {
+                "coins": 20,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 2,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 3,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 4,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 5,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 6,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 7,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 8,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 9,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 10,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 11,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 12,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 13,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 14,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 15,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 16,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 17,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 18,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 19,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 20,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 21,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 22,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 23,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 24,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 25,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 26,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 27,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 28,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 29,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 30,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 31,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 32,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 33,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 34,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 35,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 36,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 37,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 38,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 39,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 40,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 41,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 42,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 43,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 44,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 45,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 46,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 47,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 48,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 49,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 50,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 51,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 52,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 53,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 54,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 55,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 56,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 57,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 58,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 59,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 60,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 61,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 62,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 63,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 64,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 65,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 66,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 67,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 68,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 69,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 70,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 71,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 72,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 73,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 74,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 75,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 76,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 77,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 78,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 79,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 80,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 81,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 82,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 83,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 84,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 85,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 86,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 87,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 88,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 89,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 90,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 91,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 92,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 93,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 94,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 95,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 96,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 97,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 98,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 99,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        },
+        {
+            "levelNumber": 100,
+            "rewards": {
+                "coins": 0,
+                "deleteUses": 0,
+                "levelUpUses": 0,
+                "lookAheadUses": 0,
+                "extraTurnsUses": 0
+            }
+        }
+    ],
+    "daily": [
+        {
+            "coins": 100,
+            "deleteUses": 1,
+            "levelUpUses": 0,
+            "lookAheadUses": 0,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 150,
+            "deleteUses": 0,
+            "levelUpUses": 1,
+            "lookAheadUses": 0,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 200,
+            "deleteUses": 0,
+            "levelUpUses": 0,
+            "lookAheadUses": 1,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 250,
+            "deleteUses": 1,
+            "levelUpUses": 1,
+            "lookAheadUses": 0,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 300,
+            "deleteUses": 0,
+            "levelUpUses": 0,
+            "lookAheadUses": 2,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 400,
+            "deleteUses": 2,
+            "levelUpUses": 0,
+            "lookAheadUses": 1,
+            "extraTurnsUses": 0
+        },
+        {
+            "coins": 500,
+            "deleteUses": 2,
+            "levelUpUses": 2,
+            "lookAheadUses": 2,
+            "extraTurnsUses": 0
+        }
+    ]
+}

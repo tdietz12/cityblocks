@@ -506,7 +506,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** The chip shows the cloud balance after launch and the last cached value when offline.
 - **Depends on:** 22
 
-#### Step 24 — `ConnectivityService` + offline indicator · M · 🟡 implemented; device checks pending
+#### Step 24 — `ConnectivityService` + offline indicator · M · ✅ user confirmed working
 - **Implementation status:** ConnectivityService probes Bootstrap on launch/resume/reachability change and retries every 30 seconds while offline; no periodic online heartbeat. OfflineIndicator prefab is wired in MainMenu TopBar. Currently optimistic until the first completed cloud check. Step 26 wires power-up/store restrictions; they are not locked by this step.
 - **Verified:** previous Play Mode check showed cached coins=500, simulated failure showed the badge and offline_mode_changed(state=offline, is_online=0); badge screenshot checked. Latest analytics checks: 1299 passed; iOS export succeeded with 0 errors.
 - **Remaining verification:** real airplane-mode/reconnect and resume wallet refresh on device; automatic retry was not reliably verified because the previous test was interrupted. Existing AnalyticsSink service-shutdown warning also appears during Edit Mode analytics checks; event payload checks pass, but that warning is not fixed here.
@@ -519,15 +519,37 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 
 ## Milestone F — Power-ups move to the server + offline lock (switch-over)
 
-#### Step 25 — `UsePowerUp` endpoint · S
+#### Step 25 — `UsePowerUp` endpoint · S · 🟡 code verified; deployment pending
+- **Files implemented:** CityBlocksCCM/CityBlocks/PowerUpUse.cs, PowerUpModule.cs; CityBlocks.Tests/PowerUpUseTests.cs. Existing RulesTests NUnit 4 assertion fixed.
+- **Contract:** module CityBlocks endpoint UsePowerUp(powerUp, useId). powerUp = delete/lookAhead/levelUp/extraTurns; useId = unixMilliseconds:GUID-N, valid for 24 hours (5-minute future tolerance). Client must persist/reuse IDs and activate once, only for status applied. Results: applied/insufficient/pending/invalid/not_initialized, BalanceAfter, Replay.
+- **Fail-safe:** Protected welcome_granted marker is upgraded to a JSON-string journal preserving WelcomeGrantedAt; the existing key provides a CAS anchor (avoids racing creation of a lock key). Bootstrap still checks key existence, so no welcome re-grant. All debits use ServiceToken. A pending receipt blocks further uses until verified recovery; never retry a debit whose outcome is uncertain. Completed receipts older than 48 hours are pruned; expired IDs rejected before lookup. 4096 retained receipts is a fail-closed storage guard.
+- **Verified locally:** actual dotnet test passed all 16 tests; Linux publish succeeded with no warnings/errors. Tests include replay, concurrent duplicate reservation, insufficient funds, invalid/expired IDs, reservation failure, lost debit response, lost commit response, and bootstrap prerequisite.
+- **User checkpoint:** Deploy CityBlocks module to development. Backend adapter behavior still needs deployed verification. Step 26 wires gameplay, offline lock, pending-use UI/recovery, and persistent client operation IDs. No scene or gameplay changes in Step 25.
 - **Files:** `PlayerModule.cs` + tests (idempotent by `useId`).
 - **🔍 Checkpoint:** Tests pass; deployed.
 - **Depends on:** 22
 
+#### Step 25b — Reward authoring · ✅ configuration implemented
+- **Decision:** per-level rewards are first-win-only per player. Each LevelDefinition exposes firstWinRewards (coins + four power-up amounts). Daily rewards can contain coins and/or power-ups per streak day. Welcome remains 500 coins only.
+- **Files:** RewardAmounts.cs, DailyRewardSchedule.cs, LevelDefinition.cs and its existing custom Inspector, Assets/Gameplay/Rewards/DailyRewardSchedule.asset, RewardConfigurationExport.cs.
+- **Authoring:** all level first-win amounts default to zero (no invented reward schedule). Daily schedule seeded from the current service's 7-day power-up and display-coin arrays. Tools > City Blocks > Cloud > Export Reward Configuration writes CityBlocksCCM/CityBlocks/RewardConfiguration.json, refuses invalid/duplicate level entries or invalid daily schedule.
+- **Verified:** C# compilation, existing level reward property, 7 valid daily rows, power-up mapping, negative validation, successful export. Gameplay grants remain unchanged in this slice.
+
+#### Step 25c — Server reward catalog and claim endpoints · in progress
+- **Slice 1 — Server catalog: ✅ code verified.** RewardCatalog.cs validates and loads embedded RewardConfiguration.json; csproj packages JSON into the assembly for deployment. Rejects missing/duplicate levels, negative rewards, wrong schema, non-first-win policy, invalid daily count/day. Lookups return copies and map amounts to Economy IDs. Read-only GetRewardCatalogStatus endpoint reports schema/first-win policy/level count/daily count. Actual .NET test suite: 24 passed; Linux publish clean. Export and redeploy after reward edits. Gameplay rewards are not wired yet.
+- **Slice 2 — First-win claims: ✅ code verified; user confirmed deployed.** LevelRewardsModule.AwardLevelRewards(context, levelNumber) reads the deployed catalog, reserves a level receipt with a Protected Cloud Save write lock, credits the configured Economy currencies using ServiceToken, and records applied. Returns applied/already_claimed/pending/invalid/not_initialized plus newly Granted and affected BalancesAfter. Shared welcome_granted journal now retains LevelClaims; both rewards and power-up debits block on any unresolved operation. First-win history is not pruned; replays grant nothing even after reward edits. An empty bundle still marks a completed claim. Client reports a win; server validates the reward/claim, not board simulation. Actual dotnet tests: 34 passed; Linux publish clean. No gameplay/UI changes yet.
+- **Slice 3 — Target reward reset: ✅ code verified; credentials/live check pending.** Progression Options in Player Reset Tool has unchecked Reset Target Level Reward. Uses Services APIs 1.1.1 IAdminClient to resolve development by name and edit only the selected LevelClaims receipt with a write lock, preserving unknown fields/welcome/use history; never changes Economy balances. No player-callable reset endpoint. Reads current signed-in PlayerId or the last wallet cache ID (shown in tool). Key ID/secret entered in memory only; secret cleared after attempt. Cloud failure cancels local level setup; pending operations refused. Existing independent local reset options retain behavior. Six deterministic checks passed; iOS export succeeded with 0 errors. User must create authorized service-account key with Cloud Save player-data read/write and environment-read access; live reset unverified without credentials.
+- **Remaining slices:** mixed server-time daily claim endpoint; then client wiring (25d). Keep separate review checkpoints for each slice.
+- Package/load the exported catalog in Cloud Code. Expand Step 28 to AwardLevelRewards (coins and/or power-ups, first-clear-once per player/level, not only per attempt). Advance the server portion of Step 32 to mixed ClaimDailyReward using server time. Never accept reward amounts from the client. Include concurrency/interruption protection and tests.
+- **Player Reset Tool requirement (confirmed):** add an unchecked-by-default `Reset Target Level Reward` option under Progression Options in `SaveDataManagerWindow`. When setting a level, reset only that selected level's server-side first-win reward eligibility for the current player. Preserve all existing coins/power-ups and every other level's claim history. Do not reset eligibility merely by changing local completedLevels. Implement alongside the server claim ledger, using an authorized development-only reset path (not an unrestricted player-callable production endpoint). Surface reset success/failure in the tool; do not report success when offline or when the backend reset fails. Do not clear unresolved partial/pending grants to enable duplicate payment; refuse until resolved. Verify resetting Level 10 makes only Level 10 claimable and leaves balances unchanged.
+
+#### Step 25d — Wire configured level/daily claims · pending
+- Advance the relevant Step 29/32 client integrations before Step 26 so the inventory switch does not strand local grants. Display the same daily schedule asset, surface pending claims, and retain local progress while offline. Deploy after catalog changes.
+
 #### Step 26 — Switch power-ups to the cloud wallet + offline lock · M
 - **Files:** `PowerUpStore.cs` (façade over `PlayerWallet`; the local bundle-grant path is disabled — safe because every `StoreOffers/*.asset` still has an empty `productId`), `GameController.cs` (`TryBeginPowerUp`, `ActivateLookAhead`, `Apply*PowerUp` wait for server confirmation), `LevelRulesUI.cs` (lock badge + toast), power-up button scripts, `LevelAnalytics.cs` (`booster_blocked_offline`).
 - **🔍 Checkpoint:** Using a booster lowers the cloud balance; offline → power-up buttons and the store are locked, toast shown, `booster_blocked_offline` logged; levels stay playable; a rapid double-tap uses only one; `booster_used.balance_after` matches the server value.
-- **Depends on:** 9, 24, 25
+- **Depends on:** 9, 24, 25, 25b, 25c, 25d
 
 ---
 

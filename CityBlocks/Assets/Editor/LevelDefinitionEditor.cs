@@ -95,6 +95,11 @@ namespace Editor
             EditorGUILayout.PropertyField(tutorialStepsProp, true);
             EditorGUILayout.PropertyField(showAdAfterWinProp);
 
+            EditorGUILayout.Space(8);
+            EditorGUILayout.LabelField("First Win Rewards", EditorStyles.boldLabel);
+            EditorGUILayout.PropertyField(serializedObject.FindProperty("firstWinRewards"), new GUIContent("Rewards"), true);
+            EditorGUILayout.HelpBox("Granted only on the first win per player. Zero means no reward of that type. Export and deploy reward configuration after editing.", MessageType.Info);
+
             serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.Space(8);
