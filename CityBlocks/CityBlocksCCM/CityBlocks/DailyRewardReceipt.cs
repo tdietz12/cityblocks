@@ -24,7 +24,9 @@ namespace CityBlocks.CloudCode
         public int PreviousStreak { get; set; }
         public int DaysMissed { get; set; }
         public RewardBundle Reward { get; set; } = new RewardBundle();
-        public Dictionary<string, long> Granted { get; set; } = new Dictionary<string, long>();
+        public RewardBundle[] Schedule { get; set; } = System.Array.Empty<RewardBundle>();
+        public bool LegacyStateImported { get; set; }
+        public Dictionary<string, long> Granted{ get; set; } = new Dictionary<string, long>();
         public Dictionary<string, long> BalancesAfter { get; set; } = new Dictionary<string, long>();
     }
 }

@@ -8,8 +8,8 @@ using UnityEngine.UI;
 namespace UI
 {
     /// <summary>
-    /// Daily login reward modal. Opens automatically on the main menu once per day: today's reward is claimed and its
-    /// power-ups are added to the inventory as the modal opens, so COLLECT and closing both keep the reward.
+    /// Daily login reward modal. Checks server eligibility on the main menu and displays confirmed cloud rewards.
+    /// COLLECT and closing both keep an already granted reward. Offline/pending states never grant locally.
     /// </summary>
     public class DailyLoginStreakUI : MonoBehaviour
     {
@@ -38,6 +38,7 @@ namespace UI
         [SerializeField] private TMP_Text feedbackLabel;
 
         [Header("7-day track")]
+        [SerializeField] private DailyRewardSchedule rewardSchedule;
         [SerializeField] private DayTile[] dayTiles = new DayTile[DailyLoginStreakService.StreakLength];
 
         [Header("Reward icons")]
@@ -66,67 +67,140 @@ namespace UI
         // True while the modal is showing an editor preview (nothing claimed), so closing it sends no analytics.
         private bool previewOnly;
 
+        private bool cloudRequestRunning;
+        private bool claimConfirmed;
+        private RewardAmounts[] serverSchedule;
+        private TMP_Text collectLabel;
+
         private void Start()
         {
-            if (collectButton != null) collectButton.onClick.AddListener(() => Dismiss("collect"));
-            if (closeButton != null) closeButton.onClick.AddListener(() => Dismiss("close"));
-if (panel != null && !popupOpen) panel.SetActive(false);
-StartCoroutine(AutoOpenAfterDelay());
-}
+            if (collectButton != null)
+            {
+                collectLabel = collectButton.GetComponentInChildren<TMP_Text>(true);
+                collectButton.onClick.AddListener(OnCollect);
+            }
+            if (closeButton != null) closeButton.onClick.AddListener(OnClose);
+            if (panel != null && !popupOpen) panel.SetActive(false);
+            StartCoroutine(AutoOpenAfterDelay());
+        }
 
-private void OnApplicationPause(bool paused)
-{
-// Covers midnight passing while the player sits on the main menu with the app in the background.
-if (!paused && isActiveAndEnabled) StartCoroutine(AutoOpenAfterDelay());
-}
-
-private System.Collections.IEnumerator AutoOpenAfterDelay()
-{
-if (autoOpenPending || popupOpen) yield break;
-autoOpenPending = true;
-if (autoOpenDelay > 0f) yield return new WaitForSecondsRealtime(autoOpenDelay);
-autoOpenPending = false;
-TryAutoOpen();
-}
-
+        private void OnEnable() => CloudServices.ConnectivityService.OnlineChanged += OnOnlineChanged;
+        private void OnDisable()
+        {
+            CloudServices.ConnectivityService.OnlineChanged -= OnOnlineChanged;
+            autoOpenPending = false;
+        }
+        private void OnDestroy()
+        {
+            if (collectButton != null) collectButton.onClick.RemoveListener(OnCollect);
+            if (closeButton != null) closeButton.onClick.RemoveListener(OnClose);
+        }
+        private void OnOnlineChanged(bool online)
+        {
+            if (online && isActiveAndEnabled && !claimConfirmed) TryAutoOpen();
+        }
+        private void OnApplicationPause(bool paused)
+        {
+            if (!paused && isActiveAndEnabled) StartCoroutine(AutoOpenAfterDelay());
+        }
+        private System.Collections.IEnumerator AutoOpenAfterDelay()
+        {
+            if (autoOpenPending || popupOpen) yield break;
+            autoOpenPending = true;
+            if (autoOpenDelay > 0f) yield return new WaitForSecondsRealtime(autoOpenDelay);
+            autoOpenPending = false;
+            TryAutoOpen();
+        }
         private void Update()
         {
             if (popupOpen && Input.GetKeyDown(KeyCode.Escape)) Dismiss("close");
         }
-
-        /// <summary>Claims today's reward and opens the modal, if a reward is available and the player isn't being redirected into the first tutorial.</summary>
-        /// <summary>True while the popup is open or waiting to auto-open (other menu popups queue behind it).</summary>
-        public bool IsShowingOrPending => popupOpen || autoOpenPending;
-
+        public bool IsShowingOrPending => popupOpen || autoOpenPending || cloudRequestRunning;
         public void TryAutoOpen() => Open(false);
+        private void OnCollect()
+        {
+            if (claimConfirmed || previewOnly) Dismiss("collect");
+            else Open(true);
+        }
+        private void OnClose() => Dismiss("close");
 
 #if UNITY_EDITOR
-        /// <summary>
-        /// Editor test hook: claims today's reward and (re)opens the modal even if it is already showing or the player
-        /// is a brand-new tutorial player. Returns false if there was nothing to claim.
-        /// </summary>
+        /// <summary>Visual preview only. It never bypasses server eligibility or grants inventory.</summary>
         public bool DebugForceOpen()
         {
-            if (panel == null || !DailyLoginStreakService.CanClaim) return false;
-            popupOpen = false;
-            previewOnly = false;
-            panel.SetActive(false); // so the entrance animation replays
-            Open(true);
-            return popupOpen;
-        }
-#endif
-
-        private void Open(bool ignoreFirstLaunch)
-        {
-            if (popupOpen || panel == null || !DailyLoginStreakService.CanClaim) return;
-            if (!ignoreFirstLaunch && IsFirstLaunchRedirect()) return;
-            if (!DailyLoginStreakService.Claim(out int day, out PowerUpInventory reward)) return;
-
-            shownDay = day;
-            Populate(day, reward);
+            if (panel == null || cloudRequestRunning) return false;
+            panel.SetActive(false);
+            previewOnly = true;
+            claimConfirmed = true;
+            shownDay = DailyLoginStreakService.CurrentStreakDay;
+            Populate(shownDay, RewardForDisplay(shownDay).ToPowerUps(), RewardForDisplay(shownDay).coins);
+            if (feedbackLabel != null) feedbackLabel.text = "EDITOR PREVIEW — NO REWARD GRANTED";
+            if (collectLabel != null) collectLabel.text = "CLOSE PREVIEW";
             popupOpen = true;
             openedAt = Time.realtimeSinceStartup;
             UIPanelAnimator.SetAnimatedActive(panel, true);
+            return true;
+        }
+#endif
+
+        private async void Open(bool ignoreFirstLaunch)
+        {
+            if (cloudRequestRunning || panel == null || (popupOpen && claimConfirmed)) return;
+            if (!ignoreFirstLaunch && IsFirstLaunchRedirect()) return;
+            cloudRequestRunning = true;
+            previewOnly = false;
+            if (collectButton != null) collectButton.interactable = false;
+            try
+            {
+                var response = await CloudServices.CloudDailyRewards.CheckAndClaimAsync();
+                if (this == null || !isActiveAndEnabled) return;
+                if (response != null && response.Schedule != null && response.Schedule.Length == 7)
+                    serverSchedule = response.Schedule;
+                if (response != null && response.Status == "already_claimed")
+                {
+                    // Another request/device may have claimed it. Never claim or add inventory locally.
+                    if (popupOpen) Dismiss("close");
+                    return;
+                }
+                var cached = response ?? CloudServices.CloudDailyRewards.Cached;
+                shownDay = Mathf.Clamp(cached != null ? cached.StreakDay : 1, 1, 7);
+                claimConfirmed = response != null && response.Status == "applied";
+                var reward = response != null && response.Reward != null ? response.Reward : RewardForDisplay(shownDay);
+                Populate(shownDay, reward.ToPowerUps(), reward.coins);
+                if (!claimConfirmed)
+                {
+                    if (rewardLabel != null) rewardLabel.text = response != null && response.Status == "pending" ? "REWARD PROCESSING" : "CONNECT TO CLAIM";
+                    if (feedbackLabel != null) feedbackLabel.text = response != null && response.Status == "pending"
+                        ? "Your reward is pending. No extra claim will be made." : "Connect to the internet, then retry.";
+                }
+                if (collectLabel != null) collectLabel.text = claimConfirmed ? "COLLECT" : "RETRY";
+                if (!popupOpen)
+                {
+                    popupOpen = true;
+                    openedAt = Time.realtimeSinceStartup;
+                    UIPanelAnimator.SetAnimatedActive(panel, true);
+                }
+            }
+            catch (Exception exception)
+            {
+                Debug.LogWarning("[DailyRewards] Popup check failed: " + exception.Message);
+                if (this != null && feedbackLabel != null) feedbackLabel.text = "Couldn't claim. Check your connection and retry.";
+            }
+            finally
+            {
+                cloudRequestRunning = false;
+                if (this != null && collectButton != null) collectButton.interactable = true;
+            }
+        }
+
+        private RewardAmounts RewardForDisplay(int day)
+        {
+            int index = Mathf.Clamp(day, 1, 7) - 1;
+            if (serverSchedule != null && serverSchedule.Length == 7 && serverSchedule[index] != null) return serverSchedule[index];
+            if (rewardSchedule != null && rewardSchedule.IsValid) return rewardSchedule.ForDay(day);
+            var old = DailyLoginStreakService.RewardForDay(day);
+            return new RewardAmounts { coins = DailyLoginStreakService.CoinsForDay(day), deleteUses = old.deleteUses,
+                levelUpUses = old.levelUpUses, lookAheadUses = old.deleteRowUses, extraTurnsUses = old.extraTurnsUses };
         }
 
         private static bool IsFirstLaunchRedirect()
@@ -142,18 +216,19 @@ TryAutoOpen();
             popupOpen = false;
             if (!previewOnly) LevelAnalytics.DailyRewardPopupShown(shownDay, method, Mathf.RoundToInt(Time.realtimeSinceStartup - openedAt));
             previewOnly = false;
+            claimConfirmed = false;
             UIPanelAnimator.SetAnimatedActive(panel, false);
         }
 
-        private void Populate(int day, PowerUpInventory reward)
+        private void Populate(int day, PowerUpInventory reward, int coins)
         {
             if (streakLabel != null) streakLabel.text = "LOGIN STREAK  " + day + " / " + DailyLoginStreakService.StreakLength + " DAYS";
-            if (rewardLabel != null) rewardLabel.text = "+" + Describe(reward, DailyLoginStreakService.CoinsForDay(day));
+            if (rewardLabel != null) rewardLabel.text = "+" + Describe(reward, coins);
             if (feedbackLabel != null)
             {
                 int tomorrow = Mathf.Min(DailyLoginStreakService.StreakLength, day + 1);
-                feedbackLabel.text = "Come back tomorrow for " +
-                    Describe(DailyLoginStreakService.RewardForDay(tomorrow), DailyLoginStreakService.CoinsForDay(tomorrow)).ToLowerInvariant();
+                var tomorrowReward = RewardForDisplay(tomorrow);
+                feedbackLabel.text = "Come back tomorrow for " + Describe(tomorrowReward.ToPowerUps(), tomorrowReward.coins).ToLowerInvariant();
             }
             for (int i = 0; i < dayTiles.Length; i++) PopulateTile(dayTiles[i], i + 1, day);
         }
@@ -161,9 +236,11 @@ TryAutoOpen();
         private void PopulateTile(DayTile tile, int tileDay, int today)
         {
             if (tile == null) return;
-            bool collected = tileDay <= today;
+            bool collected = tileDay < today || (tileDay == today && (claimConfirmed || previewOnly));
             bool isToday = tileDay == today;
-            PowerUpInventory reward = DailyLoginStreakService.RewardForDay(tileDay);
+            RewardAmounts configured = RewardForDisplay(tileDay);
+            PowerUpInventory reward = configured.ToPowerUps();
+            bool hasPowerUps = DailyLoginStreakService.TotalUses(reward) > 0;
             Color ink = collected ? collectedInk : upcomingInk;
 
             if (tile.background != null) tile.background.color = collected ? collectedColor : upcomingColor;
@@ -172,25 +249,25 @@ TryAutoOpen();
             if (tile.checkIcon != null) { tile.checkIcon.gameObject.SetActive(collected); tile.checkIcon.color = ink; }
             if (tile.rewardIcon != null)
             {
-                tile.rewardIcon.gameObject.SetActive(!collected);
+                tile.rewardIcon.gameObject.SetActive(!collected && hasPowerUps);
                 tile.rewardIcon.sprite = IconFor(reward);
                 tile.rewardIcon.color = Color.white;
             }
             if (tile.amountLabel != null)
             {
-                tile.amountLabel.gameObject.SetActive(!collected);
+                tile.amountLabel.gameObject.SetActive(!collected && hasPowerUps);
                 tile.amountLabel.text = "x" + DailyLoginStreakService.TotalUses(reward);
                 tile.amountLabel.color = ink;
             }
             if (tile.coinIcon != null)
             {
-                tile.coinIcon.gameObject.SetActive(!collected);
+                tile.coinIcon.gameObject.SetActive(!collected && configured.coins > 0);
                 tile.coinIcon.color = coinColor;
             }
             if (tile.coinLabel != null)
             {
-                tile.coinLabel.gameObject.SetActive(!collected);
-                tile.coinLabel.text = DailyLoginStreakService.CoinsForDay(tileDay).ToString();
+                tile.coinLabel.gameObject.SetActive(!collected && configured.coins > 0);
+                tile.coinLabel.text = configured.coins.ToString();
                 tile.coinLabel.color = coinColor;
             }
         }
@@ -218,7 +295,7 @@ TryAutoOpen();
         public static string Describe(PowerUpInventory reward)
         {
             if (reward == null) return "";
-            if (reward.deleteUses > 0 && reward.deleteUses == reward.levelUpUses && reward.levelUpUses == reward.deleteRowUses)
+            if (reward.extraTurnsUses == 0 && reward.deleteUses > 0 && reward.deleteUses == reward.levelUpUses && reward.levelUpUses == reward.deleteRowUses)
                 return reward.deleteUses + " OF EACH POWER-UP";
 
             string text = "";

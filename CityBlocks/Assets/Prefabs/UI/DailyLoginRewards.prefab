@@ -5973,6 +5973,7 @@ MonoBehaviour:
   streakLabel: {fileID: 7379126508947008109}
   rewardLabel: {fileID: 2789743311822947066}
   feedbackLabel: {fileID: 5229622718313992180}
+  rewardSchedule: {fileID: 11400000, guid: 1e724882226a741b3a1301fc29ae333e, type: 2}
   dayTiles:
   - background: {fileID: 1940801866328037686}
     dayLabel: {fileID: 3255497488643439921}
@@ -6039,6 +6040,7 @@ MonoBehaviour:
   collectedInk: {r: 0.059, g: 0.059, b: 0.059, a: 1}
   upcomingInk: {r: 0.42, g: 0.467, b: 0.522, a: 1}
   coinColor: {r: 0.98, g: 0.78, b: 0.2, a: 1}
+  autoOpenDelay: 0.45
 --- !u!1 &8381613954654584776
 GameObject:
   m_ObjectHideFlags: 0

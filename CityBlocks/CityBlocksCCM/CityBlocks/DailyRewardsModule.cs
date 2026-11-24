@@ -23,6 +23,11 @@ namespace CityBlocks.CloudCode
             return DailyRewardClaim.Preview(read?.Journal, RewardCatalog.Deployed, DateTimeOffset.UtcNow);
         }
 
+        [CloudCodeFunction("MigrateDailyRewardState")]
+        public Task<DailyRewardResult> MigrateDailyRewardState(IExecutionContext context, int streakDay, string lastClaimUtcDate)
+            => DailyRewardMigration.ImportAsync(new LevelRewardsModule.Store(api, context), RewardCatalog.Deployed,
+                streakDay, lastClaimUtcDate, DateTimeOffset.UtcNow);
+
         [CloudCodeFunction("ClaimDailyReward")]
         public async Task<DailyRewardResult> ClaimDailyReward(IExecutionContext context)
         {

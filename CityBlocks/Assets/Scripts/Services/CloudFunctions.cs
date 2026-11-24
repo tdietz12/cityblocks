@@ -65,6 +65,28 @@ namespace CloudServices
             }
         }
 
+        public static Task<DailyRewardResponse> GetDailyRewardStatusAsync() => CallDailyAsync("GetDailyRewardStatus", null);
+        public static Task<DailyRewardResponse> ClaimDailyRewardAsync() => CallDailyAsync("ClaimDailyReward", null);
+        public static Task<DailyRewardResponse> MigrateDailyRewardStateAsync(int streakDay, string lastClaimUtcDate)
+            => CallDailyAsync("MigrateDailyRewardState", new Dictionary<string, object>
+            {
+                { "streakDay", streakDay }, { "lastClaimUtcDate", lastClaimUtcDate ?? "" }
+            });
+
+        private static async Task<DailyRewardResponse> CallDailyAsync(string endpoint, Dictionary<string, object> args)
+        {
+            if (!await CloudBootstrap.EnsureSignedInAsync()) return null;
+            try
+            {
+                return await CloudCodeService.Instance.CallModuleEndpointAsync<DailyRewardResponse>(ModuleName, endpoint, args);
+            }
+            catch (CloudCodeException exception)
+            {
+                Debug.LogWarning("[DailyRewards] " + endpoint + " failed (" + exception.Reason + "): " + exception.Message);
+                return null;
+            }
+        }
+
         /// <summary>Server time in UTC, or null if offline / the call failed.</summary>
         public static async Task<DateTime?> GetServerTimeAsync()
         {

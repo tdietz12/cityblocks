@@ -16,7 +16,9 @@ namespace CityBlocks.CloudCode
                 UtcDate = today.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
                 ServerTimeUtc = now.UtcDateTime.ToString("o"),
                 NextClaimUtc = today.AddDays(1).ToString("o"),
-                Status = journal == null ? "not_initialized" : "available"
+                Status = journal == null ? "not_initialized" : "available",
+                Schedule = Enumerable.Range(1, 7).Select(catalog.ForStreakDay).ToArray(),
+                LegacyStateImported = journal != null && journal.LegacyDailyStateImported
             };
             if (journal == null) { result.Reward = catalog.ForStreakDay(1); return result; }
             var existing = journal.DailyClaims.FirstOrDefault(c => c.UtcDate == result.UtcDate);

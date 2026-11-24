@@ -49,7 +49,22 @@ namespace Gameplay
 
         public const int StreakLength = 7;
 
-        /// <summary>Power-up uses granted for a streak day (1..7). Returns a copy.</summary>
+        /// <summary>Reads old local claim state for one-time cloud migration; never grants anything.</summary>
+        public static void ReadLegacyState(out int streakDay, out string lastClaimUtcDate)
+        {
+            DailyLoginStreakData data = Load();
+            streakDay = Mathf.Clamp(data.streakDay, 0, StreakLength);
+            lastClaimUtcDate = "";
+            if (data.lastClaimedLocalDateTicks <= 0) return;
+            try
+            {
+                DateTime localDate = new DateTime(data.lastClaimedLocalDateTicks, DateTimeKind.Local);
+                lastClaimUtcDate = localDate.ToUniversalTime().ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+            }
+            catch (ArgumentOutOfRangeException) { streakDay = 0; }
+        }
+
+        /// <summary>Power-up uses grantedfor a streak day (1..7). Returns a copy.</summary>
         public static PowerUpInventory RewardForDay(int day)
         {
             PowerUpInventory source = DailyRewards[Mathf.Clamp(day, 1, DailyRewards.Length) - 1];
