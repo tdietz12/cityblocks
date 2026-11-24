@@ -105,6 +105,9 @@ namespace Gameplay
         /// <summary>Online state flipped. state: online / offline. reason: launch, resume, reachability, retry, action, call. durationSeconds: time spent in the previous state.</summary>
         public static void OfflineModeChanged(string state, string reason, int durationSeconds) => Record("offline_mode_changed",
             "state", state ?? "", "reason", reason ?? "", "duration_s", durationSeconds);
+        public static void BoosterBlockedOffline(string boosterId, int level, bool endless) => Record("booster_blocked_offline",
+            "booster_id", boosterId ?? "", "level_number", level, "is_endless_level", endless ? 1 : 0);
+
         /// <summary>A continue (extra moves) was shown on the loss screen. continueIndex: 1 = first continue in this attempt.</summary>
         public static void ContinueOffered(int level, int attempt, string attemptId, int continueIndex, int movesOffered) => Record("continue_offered",
             "level_number", level, "attempt_number", attempt, "attempt_id", attemptId ?? "", "continue_index", continueIndex, "moves_offered", movesOffered);

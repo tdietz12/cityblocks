@@ -87,6 +87,21 @@ namespace CloudServices
             }
         }
 
+        public static async Task<PowerUpUseResponse> UsePowerUpAsync(string powerUp, string useId, string expectedPlayerId)
+        {
+            if (!await CloudBootstrap.EnsureSignedInAsync() || AccountService.PlayerId != expectedPlayerId) return null;
+            try
+            {
+                return await CloudCodeService.Instance.CallModuleEndpointAsync<PowerUpUseResponse>(ModuleName, "UsePowerUp",
+                    new Dictionary<string, object> { { "powerUp", powerUp }, { "useId", useId } });
+            }
+            catch (CloudCodeException exception)
+            {
+                Debug.LogWarning("[PowerUps] Use request retained: " + exception.Message);
+                return null;
+            }
+        }
+
         /// <summary>Server time in UTC, or null if offline / the call failed.</summary>
         public static async Task<DateTime?> GetServerTimeAsync()
         {

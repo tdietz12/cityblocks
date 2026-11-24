@@ -14,7 +14,7 @@ namespace EditorTools
         [MenuItem(CityBlocksMenuPath, false, 1)]
         public static void GiveTenOfEveryPowerUp()
         {
-            AddPowerUpsToInventory(10);
+            PowerUpManagerWindow.RequestTenGrant();
         }
 
         public static LevelProgressData AddPowerUpsToInventory(int count, bool showDialog = true)
@@ -147,6 +147,37 @@ namespace EditorTools
     {
         private const string WindowMenuPath = "Tools/Power-Up Manager";
         private const string CityBlocksWindowMenuPath = "Tools/City Blocks/Power-Up Manager";
+        private string serviceKeyId = "";
+        private string serviceKeySecret = "";
+        private string grantStatus = "";
+        private bool granting;
+
+        public static void RequestTenGrant()
+        {
+            ShowWindow();
+            GetWindow<PowerUpManagerWindow>("Power-Up Manager").GrantTenLocalCloud();
+        }
+
+        private async void GrantTenLocalCloud()
+        {
+            if (granting) return;
+            granting = true;
+            grantStatus = "Granting +10 locally and in development cloud...";
+            try
+            {
+                grantStatus = await CityBlocks.EditorTools.PowerUpTestGrantAdmin.GiveTenAsync(serviceKeyId, serviceKeySecret);
+            }
+            catch (System.Exception exception) { grantStatus = exception.Message; }
+            finally
+            {
+                if (this != null)
+                {
+                    granting = false;
+                    serviceKeySecret = "";
+                    Repaint();
+                }
+            }
+        }
 
         [MenuItem(WindowMenuPath, false, 2)]
         [MenuItem(CityBlocksWindowMenuPath, false, 2)]
@@ -162,9 +193,15 @@ namespace EditorTools
             EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Power-Up Inventory Manager", EditorStyles.boldLabel);
             EditorGUILayout.LabelField("Manage power-up counts for testing & gameplay.", EditorStyles.miniLabel);
+            EditorGUILayout.HelpBox("+10 updates local and development cloud inventory. Stop Play Mode/other clients first. Other adjustment buttons below remain local-only.", MessageType.Info);
+            EditorGUILayout.LabelField("Development Player", CityBlocks.EditorTools.PowerUpTestGrantAdmin.CurrentPlayerId());
+            serviceKeyId = EditorGUILayout.TextField("Service Account Key ID", serviceKeyId);
+            serviceKeySecret = EditorGUILayout.PasswordField("Key Secret", serviceKeySecret);
+            if (!string.IsNullOrEmpty(grantStatus)) EditorGUILayout.HelpBox(grantStatus, MessageType.None);
             EditorGUILayout.Space(5);
+            EditorGUI.BeginDisabledGroup(granting);
 
-            LevelProgressData data = LevelProgressStore.Load();
+            LevelProgressData data= LevelProgressStore.Load();
             if (data == null) data = new LevelProgressData();
             if (data.powerUps == null) data.powerUps = new PowerUpInventory();
 
@@ -182,10 +219,10 @@ namespace EditorTools
             EditorGUILayout.Space(10);
 
             GUI.backgroundColor = new Color(0.4f, 0.85f, 0.4f);
-            if (GUILayout.Button("+10 of Every Power-Up", GUILayout.Height(36)))
+            using (new EditorGUI.DisabledScope(granting))
             {
-                PowerUpEditorMenu.AddPowerUpsToInventory(10, showDialog: false);
-                Repaint();
+                if (GUILayout.Button(granting ? "Granting..." : "+10 of Every Power-Up (Local + Cloud)", GUILayout.Height(36)))
+                    GrantTenLocalCloud();
             }
             GUI.backgroundColor = Color.white;
 
@@ -224,6 +261,7 @@ namespace EditorTools
                 }
             }
             GUI.backgroundColor = Color.white;
+            EditorGUI.EndDisabledGroup();
         }
 
         private void DrawPowerUpRow(string label, GameController.PowerUpType type, int currentCount)

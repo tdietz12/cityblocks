@@ -18,14 +18,107 @@ namespace Gameplay
             return data;
         }
 
-        public static int Uses(GameController.PowerUpType type) => LoadProgress().powerUps.Get(type);
+        private static bool cloudUseBusy;
+        public static bool IsBusy => cloudUseBusy;
+        public static string Feedback { get; private set; } = "";
+        public static bool CanUse => CloudServices.ConnectivityService.IsOnline && CloudServices.CloudBootstrap.IsSignedIn &&
+            CloudServices.PlayerWallet.HasValue && MigrationReady && !cloudUseBusy;
+        public static bool CanAccessStore => CloudServices.ConnectivityService.IsOnline && CloudServices.CloudBootstrap.IsSignedIn;
+        private static bool MigrationReady => !string.IsNullOrEmpty(CloudServices.AccountService.PlayerId) &&
+            PlayerPrefs.GetInt("cityblocks_powerups_migrated_" + CloudServices.AccountService.PlayerId, 0) == 1;
 
-        public static bool TryUse(GameController.PowerUpType type)
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetCloudStatics() { cloudUseBusy = false; Feedback = ""; }
+
+        public static Dictionary<string, int> LegacyMigrationPayload(string playerId)
         {
-            LevelProgressData data = LoadProgress();
-            if (!data.powerUps.TryUse(type)) return false;
-            LevelProgressStore.Save(data);
-            return true;
+            if (PlayerPrefs.GetInt("cityblocks_powerups_migrated_" + playerId, 0) == 1) return null;
+            string owner = PlayerPrefs.GetString("cityblocks_powerup_legacy_owner", "");
+            if (string.IsNullOrEmpty(owner))
+            {
+                owner = playerId;
+                PlayerPrefs.SetString("cityblocks_powerup_legacy_owner", owner);
+                PlayerPrefs.Save();
+            }
+            var result = new Dictionary<string, int>();
+            if (owner != playerId) return result;
+            var inventory = LoadProgress().powerUps;
+            int testCopies = PlayerPrefs.GetInt("cityblocks_powerup_test_excluded_" + playerId, 0);
+            foreach (GameController.PowerUpType type in new[] { GameController.PowerUpType.delete, GameController.PowerUpType.levelUp,
+                GameController.PowerUpType.lookAhead, GameController.PowerUpType.extraTurns })
+                result[type.ToString()] = Mathf.Max(0, inventory.Get(type) - testCopies);
+            return result;
+        }
+
+        public static void MarkMigrated(string playerId)
+        {
+            PlayerPrefs.SetInt("cityblocks_powerups_migrated_" + playerId, 1);
+            PlayerPrefs.Save();
+        }
+
+        public static int Uses(GameController.PowerUpType type) =>
+            (int)Math.Min(int.MaxValue, CloudServices.PlayerWallet.PowerUp(type.ToString()));
+
+        // Retained for old callers, but it must never deduct local inventory now.
+        public static bool TryUse(GameController.PowerUpType type) => false;
+
+        [Serializable] private class PendingUse { public string useId; public string type; public string context; }
+
+        public static async System.Threading.Tasks.Task<bool> TryUseAsync(GameController.PowerUpType type, string contextId)
+        {
+            if (!CanUse) { Feedback = CloudServices.ConnectivityService.IsOnline ? "Inventory is syncing or a use is pending." : "Offline — connect to use power-ups."; return false; }
+            cloudUseBusy = true;
+            Feedback = "Confirming power-up...";
+            string owner = CloudServices.AccountService.PlayerId;
+            string key = "cityblocks_powerup_pending_" + owner;
+            try
+            {
+                PendingUse pending = null;
+                string saved = PlayerPrefs.GetString(key, "");
+                if (!string.IsNullOrEmpty(saved)) pending = JsonUtility.FromJson<PendingUse>(saved);
+                if (pending == null)
+                {
+                    if (Uses(type) <= 0) { Feedback = "No uses available."; return false; }
+                    if (!await CloudServices.ConnectivityService.EnsureOnlineAsync("powerup")) { Feedback = "Offline — connect to use power-ups."; return false; }
+                    DateTime? time = await CloudServices.CloudFunctions.GetServerTimeAsync();
+                    if (!time.HasValue || CloudServices.AccountService.PlayerId != owner) { Feedback = "Couldn't confirm server time."; return false; }
+                    pending = new PendingUse
+                    {
+                        useId = new DateTimeOffset(time.Value).ToUnixTimeMilliseconds().ToString(System.Globalization.CultureInfo.InvariantCulture) + ":" + Guid.NewGuid().ToString("N"),
+                        type = type.ToString(), context = contextId
+                    };
+                    PlayerPrefs.SetString(key, JsonUtility.ToJson(pending));
+                    PlayerPrefs.Save();
+                }
+                var response = await CloudServices.CloudFunctions.UsePowerUpAsync(pending.type, pending.useId, owner);
+                if (CloudServices.AccountService.PlayerId != owner) return false;
+                if (response == null) { CloudServices.ConnectivityService.ReportCloudResult(false, "powerup"); Feedback = "Use saved for retry. Connect and try again."; return false; }
+                CloudServices.ConnectivityService.ReportCloudResult(true, "powerup");
+                if (response.Status == "applied" || response.Status == "insufficient")
+                {
+                    PlayerPrefs.DeleteKey(key);
+                    PlayerPrefs.Save(); // Persist completion before the caller activates an effect.
+                    CloudServices.PlayerWallet.ApplyPowerUpBalance(owner, pending.type, response.BalanceAfter);
+                    _ = CloudServices.PlayerWallet.RefreshAsync();
+                    if (response.Status == "insufficient"){ Feedback = "No uses available."; return false; }
+                    if (pending.context != contextId || pending.type != type.ToString())
+                    {
+                        Feedback = "Previous request resolved. Retry your current power-up.";
+                        return false;
+                    }
+                    Feedback = "";
+                    return true;
+                }
+                Feedback = response.Status == "pending" ? "Use pending — no extra charge. Resolve it before using another." : "Use needs recovery before retrying.";
+                return false;
+            }
+            catch (Exception exception)
+            {
+                Feedback = "Couldn't confirm use. Request retained for retry.";
+                Debug.LogWarning("[PowerUps] " + exception.Message);
+                return false;
+            }
+            finally { cloudUseBusy = false; }
         }
 
         /// <summary>Called only after the platform store confirms a non-consumable/bundle purchase.</summary>
@@ -39,16 +132,7 @@ namespace Gameplay
         /// <param name="source">purchase, daily, welcome, migration…</param>
         public static void Grant(PowerUpInventory uses, string source)
         {
-            if (uses == null) return;
-            LevelProgressData data = LoadProgress();
-            data.powerUps.Add(uses);
-            LevelProgressStore.Save(data);
-            foreach (GameController.PowerUpType type in new[] { GameController.PowerUpType.delete, GameController.PowerUpType.lookAhead,
-                                                                GameController.PowerUpType.levelUp, GameController.PowerUpType.extraTurns })
-            {
-                int amount = uses.Get(type);
-                if (amount > 0) LevelAnalytics.PowerUpGranted(type, amount, source, data.powerUps.Get(type));
-            }
+            Debug.LogWarning("[PowerUps] Local grants are disabled. Rewards must be granted through Cloud Code.");
         }
 
         /// <summary>Called only after the platform store confirms the no-ads product.</summary>
@@ -64,7 +148,12 @@ namespace Gameplay
         public static bool FulfillPurchase(StoreOfferDefinition offer, string transactionId, double value, string currency)
         {
             if (offer == null || string.IsNullOrWhiteSpace(transactionId)) return false;
-            LevelProgressData progress = LevelProgressStore.Load();
+            if (!offer.noAdsOffer)
+            {
+                Debug.LogWarning("[PowerUps] Consumable purchases require server redemption (Step 37); leaving the transaction pending.");
+                return false;
+            }
+            LevelProgressData progress= LevelProgressStore.Load();
             if (progress.processedPurchaseIds == null) progress.processedPurchaseIds = new List<string>();
             if (progress.processedPurchaseIds.Contains(transactionId)) return true;
             bool firstPurchase = !progress.hasMadePurchase;
@@ -111,6 +200,7 @@ namespace Gameplay
 
         public static void RequestPurchase(string productId)
         {
+            if (!CanAccessStore) { Feedback = "Offline — connect to open the store."; return; }
             if (!string.IsNullOrWhiteSpace(productId)) PurchaseRequested?.Invoke(productId);
         }
 

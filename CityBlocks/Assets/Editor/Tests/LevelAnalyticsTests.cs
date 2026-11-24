@@ -60,6 +60,8 @@ namespace CityBlocks.EditorTests
                     "amount", 500, "source", "welcome", "balance_after", 500),
                 C("OfflineModeChanged", "offline_mode_changed", () => LevelAnalytics.OfflineModeChanged("offline", "reachability", 42),
                     "state", "offline", "reason", "reachability", "duration_s", 42),
+                C("BoosterBlockedOffline", "booster_blocked_offline", () => LevelAnalytics.BoosterBlockedOffline("delete", 5, false),
+                    "booster_id", "delete", "level_number", 5, "is_endless_level", 0),
                 C("LevelStarted", "level_start", () => LevelAnalytics.LevelStarted(5, 2, "a1"),
                     "level_number", 5, "attempt_number", 2, "attempt_id", "a1"),
                 C("LevelResumed", "level_resume", () => LevelAnalytics.LevelResumed(5, 2, "a1", 7),

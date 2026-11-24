@@ -30,8 +30,9 @@ namespace CloudServices
         private static Cache current;
         private static bool cacheLoaded;
         private static Task<bool> refreshTask;
+        private static int revision;
 
-        /// <summary>Raised on the main thread when balances change (refresh or cache load for a new player).</summary>
+        /// <summary>Raisedon the main thread when balances change (refresh or cache load for a new player).</summary>
         public static event Action Changed;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -40,6 +41,7 @@ namespace CloudServices
             current = null;
             cacheLoaded = false;
             refreshTask = null;
+            revision = 0;
             Changed = null;
         }
 
@@ -68,10 +70,27 @@ namespace CloudServices
 
         private static async Task<bool> RefreshInternalAsync()
         {
-            PlayerSnapshot snapshot = await CloudFunctions.BootstrapAsync();
-            if (snapshot == null) return false;
+            if (!await CloudBootstrap.EnsureSignedInAsync()) return false;
+            string owner = AccountService.PlayerId;
+            var migration = Gameplay.PowerUpStore.LegacyMigrationPayload(owner);
+            int startedRevision = revision;
+            PlayerSnapshot snapshot = await CloudFunctions.BootstrapAsync(migration);
+            if (snapshot == null || AccountService.PlayerId != owner || revision != startedRevision) return false;
             Apply(snapshot);
+            if (migration != null) Gameplay.PowerUpStore.MarkMigrated(owner);
             return true;
+        }
+
+        public static void ApplyPowerUpBalance(string playerId, string name, long balance)
+        {
+            if (!HasValue || AccountService.PlayerId != playerId) return;
+            var entry = current.powerUps.Find(p => p.name == name);
+            if (entry == null) current.powerUps.Add(new PowerUpEntry { name = name, count = balance });
+            else entry.count = balance;
+            revision++;
+            PlayerPrefs.SetString(CacheKey, JsonUtility.ToJson(current));
+            PlayerPrefs.Save();
+            RaiseChanged();
         }
 
         /// <summary>Stores a snapshot returned by any cloud call and notifies listeners.</summary>

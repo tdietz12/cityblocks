@@ -39,6 +39,7 @@ namespace UI
         [SerializeField] private TMP_Text levelUpPowerUpLabel;
         [SerializeField] private Button lookAheadPowerUpButton;
         [SerializeField] private TMP_Text lookAheadPowerUpLabel;
+        [SerializeField] private TMP_Text powerUpStatusLabel;
 
         [Header("Start / Pause Menu")]
         [SerializeField] private GameObject startPanel;
@@ -311,6 +312,7 @@ namespace UI
         /// </summary>
         public void PauseGame()
         {
+            if (game != null && game.IsPowerUpRequestPending) return;
             if (game != null) game.state = GameController.GameState.start;
             SetPanelActive(playPanel, false);
             SetPanelActive(startPanel, true);
@@ -487,7 +489,13 @@ namespace UI
         private void RefreshPowerUps()
         {
             if (game == null) return;
-            bool canUse = game.state == GameController.GameState.play && !game.IsResolvingMove && !game.HasPendingComboCelebration;
+            bool canUse = PowerUpStore.CanUse && game.state == GameController.GameState.play && !game.IsResolvingMove && !game.HasPendingComboCelebration;
+            if (pauseButton != null) pauseButton.interactable = !game.IsPowerUpRequestPending;
+            if (powerUpStatusLabel != null)
+            {
+                powerUpStatusLabel.gameObject.SetActive(game.state == GameController.GameState.play || game.state == GameController.GameState.powerUp);
+                powerUpStatusLabel.text = !CloudServices.ConnectivityService.IsOnline ? "OFFLINE — connect to use power-ups" : PowerUpStore.Feedback;
+            }
 
             // Delete Power-up
             int deleteUses = PowerUpStore.Uses(GameController.PowerUpType.delete);

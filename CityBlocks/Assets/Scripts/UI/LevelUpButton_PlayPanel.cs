@@ -18,11 +18,12 @@ namespace UI
         }
 
         private void OnEnable() => Refresh();
+        private void Update() => Refresh();
 
         private void Refresh()
         {
             int uses = PowerUpStore.Uses(GameController.PowerUpType.levelUp);
-            if (button != null) button.interactable = uses > 0;
+            if (button != null) button.interactable = PowerUpStore.CanUse && game != null && !game.IsPowerUpRequestPending && uses > 0;
             if (label != null) label.text = "LEVEL UP (" + uses + ")";
         }
 

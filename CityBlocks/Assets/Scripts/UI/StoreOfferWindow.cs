@@ -36,8 +36,17 @@ namespace UI
             if (noAdsWindow != null) noAdsWindow.SetActive(false);
         }
 
+        private void Update()
+        {
+            if (dailySpecialPurchaseButton != null)
+                dailySpecialPurchaseButton.interactable = PowerUpStore.CanAccessStore && dailySpecial != null && !string.IsNullOrWhiteSpace(dailySpecial.productId);
+            if (noAdsPurchaseButton != null)
+                noAdsPurchaseButton.interactable = PowerUpStore.CanAccessStore && noAdsOffer != null && !string.IsNullOrWhiteSpace(noAdsOffer.productId) && !PowerUpStore.AdsRemoved;
+        }
+
         public void OpenDailySpecial()
         {
+            if (!PowerUpStore.CanAccessStore) return;
             if (dailySpecial == null || !dailySpecial.dailySpecial) return;
             LevelAnalytics.StoreOpened("daily_special", CurrentLevelName());
             LevelAnalytics.ItemListViewed("daily_special");
@@ -50,7 +59,8 @@ namespace UI
 
         public void OpenNoAdsOffer()
         {
-            if (noAdsOffer == null || !noAdsOffer.noAdsOffer || PowerUpStore.AdsRemoved) return;
+            if (!PowerUpStore.CanAccessStore) return;
+            if (noAdsOffer == null|| !noAdsOffer.noAdsOffer || PowerUpStore.AdsRemoved) return;
             LevelAnalytics.StoreOpened("no_ads_offer", CurrentLevelName());
             LevelAnalytics.ItemListViewed("no_ads");
             LevelAnalytics.ItemViewed(noAdsOffer.productId, "no_ads");

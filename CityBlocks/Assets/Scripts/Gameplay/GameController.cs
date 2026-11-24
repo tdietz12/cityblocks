@@ -94,7 +94,9 @@ namespace Gameplay
 
         public int QueueIndex => queueIndex;
         public bool QueueReady => queue != null && queue.towerQueue.Count >= 2;
-        public bool IsResolvingMove => moveResolving;
+        private bool powerUpRequestPending;
+        public bool IsPowerUpRequestPending => powerUpRequestPending;
+        public bool IsResolvingMove => moveResolving || powerUpRequestPending;
         public int LookAheadTurnsRemaining => lookAheadTurnsRemaining;
         public bool LookAheadUsed => lookAheadUsed;
         public bool HasActiveRun => hasActiveRun;
@@ -401,9 +403,18 @@ namespace Gameplay
         /// <summary>
         /// Attempts to enter power-up mode for the specified booster.
         /// </summary>
+        private bool CloudPowerUpAvailable(PowerUpType type)
+        {
+            if (PowerUpStore.CanUse) return true;
+            if (!CloudServices.ConnectivityService.IsOnline)
+                LevelAnalytics.BoosterBlockedOffline(LevelAnalytics.BoosterId(type), LevelFlow.ActiveSession != null ? LevelFlow.ActiveSession.Definition.levelNumber : level, LevelFlow.ActiveSession == null);
+            return false;
+        }
+
         public bool TryBeginPowerUp(PowerUpType type)
         {
-            if (state != GameState.play || moveResolving || HasPendingComboCelebration || PowerUpStore.Uses(type) <= 0) return false;
+            if (!CloudPowerUpAvailable(type)) return false;
+            if (state != GameState.play || moveResolving || powerUpRequestPending || HasPendingComboCelebration || PowerUpStore.Uses(type) <= 0) return false;
 
             if (type == PowerUpType.lookAhead)
             {
@@ -420,25 +431,34 @@ namespace Gameplay
         /// </summary>
         public bool ActivateLookAhead()
         {
+            if (!CloudPowerUpAvailable(PowerUpType.lookAhead) || powerUpRequestPending) return false;
             if (state != GameState.play || moveResolving || HasPendingComboCelebration || lookAheadTurnsRemaining > 0) return false;
             if (levelDefinition != null && levelDefinition.moveLimit > 0 && LevelFlow.ActiveSession != null &&
                 LevelFlow.ActiveSession.MovesRemaining <= 0) return false;
             if (PowerUpStore.Uses(PowerUpType.lookAhead) <= 0) return false;
-            if (!PowerUpStore.TryUse(PowerUpType.lookAhead)) return false;
-
-            powerUp = PowerUpType.lookAhead;
-            RecordBoosterUse();
-            lookAheadUsed = true;
-            lookAheadTurnsRemaining = 3;
-            queue.visibleCount = 3;
-
-            while (queue.towerQueue.Count < 3)
-            {
-                AddTowerToQueue(GetNextQueueLevel());
-            }
-
-            LevelFlow.ActiveSession?.SaveRun();
+            _ = ApplyLookAheadAsync();
             return true;
+        }
+
+        private string PowerUpContextId => LevelFlow.ActiveSession != null ? LevelFlow.ActiveSession.AttemptId : "endless:" + EndlessAttemptNumber;
+
+        private async System.Threading.Tasks.Task ApplyLookAheadAsync()
+        {
+            powerUpRequestPending = true;
+            string requestContext = PowerUpContextId;
+            try
+            {
+                if (!await PowerUpStore.TryUseAsync(PowerUpType.lookAhead, requestContext)) return;
+                if (this == null || state != GameState.play || PowerUpContextId != requestContext) return;
+                powerUp = PowerUpType.lookAhead;
+                RecordBoosterUse();
+                lookAheadUsed = true;
+                lookAheadTurnsRemaining = 3;
+                queue.visibleCount = 3;
+                while (queue.towerQueue.Count < 3) AddTowerToQueue(GetNextQueueLevel());
+                LevelFlow.ActiveSession?.SaveRun();
+            }
+            finally { powerUpRequestPending = false; }
         }
 
         /// <summary>
@@ -447,6 +467,7 @@ namespace Gameplay
         /// </summary>
         public void GetCellHit(int col, int row)
         {
+            if (powerUpRequestPending) return;
             if (!grid.IsAvailable(col, row)) return;
 
             if (state == GameState.play)
@@ -495,42 +516,48 @@ namespace Gameplay
         /// <summary>
         /// Handles applying the active power-up to the selected cell.
         /// </summary>
-        private void HandlePowerUpCellHit(int col, int row)
+        private async void HandlePowerUpCellHit(int col, int row)
         {
-            if (grid.towersInPlay.Count > 0) return;
-
-            switch (powerUp)
+            if (powerUpRequestPending || grid.towersInPlay.Count > 0) return;
+            PowerUpType selected = powerUp;
+            if ((selected == PowerUpType.delete || selected == PowerUpType.levelUp) && grid.grid[col, row] == null) return;
+            if (selected == PowerUpType.extraTurns && LevelFlow.ActiveSession == null) return;
+            powerUpRequestPending = true;
+            string requestContext = PowerUpContextId;
+            try
             {
-                case PowerUpType.delete:
-                    ApplyDeletePowerUp(col, row);
-                    break;
-
-                case PowerUpType.lookAhead:
-                    if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
-                    if (powerUpPanel_LookAhead != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_LookAhead, false);
-                    break;
-
-                case PowerUpType.levelUp:
-                    ApplyLevelUpPowerUp(col, row);
-                    break;
-
-                case PowerUpType.extraTurns:
-                    ApplyExtraTurnsPowerUp();
-                    break;
+                if (!await PowerUpStore.TryUseAsync(selected, requestContext))
+                {
+                    if (this != null && PowerUpContextId == requestContext)
+                    {
+                        if (playPanel != null) UI.UIPanelAnimator.SetAnimatedActive(playPanel, true);
+                        if (powerUpPanel_Delete != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_Delete, false);
+                        if (powerUpPanel_LevelUp != null) UI.UIPanelAnimator.SetAnimatedActive(powerUpPanel_LevelUp, false);
+                        state = GameState.play;
+                    }
+                    return;
+                }
+                if (this == null || state != GameState.powerUp || powerUp != selected || PowerUpContextId != requestContext) return;
+                switch (selected)
+                {
+                    case PowerUpType.delete: ApplyDeletePowerUp(col, row); break;
+                    case PowerUpType.levelUp: ApplyLevelUpPowerUp(col, row); break;
+                    case PowerUpType.extraTurns: ApplyExtraTurnsPowerUp(); break;
+                }
+                onPowerUpUsed?.Invoke(selected);
+                state = GameState.play;
             }
-
-            onPowerUpUsed?.Invoke(powerUp);
-            state = GameState.play;
+            finally { powerUpRequestPending = false; }
         }
 
         private void ApplyDeletePowerUp(int col, int row)
         {
-            if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
+            if (grid.grid[col, row] == null) return;
 
             BeginComboTurn(false);
             moveResolving = true;
             RecordBoosterUse();
-            GameObject removed = grid.grid[col, row];
+            GameObject removed= grid.grid[col, row];
             grid.grid[col, row] = null;
             Destroy(removed);
             grid.ResolveGravity(col);
@@ -543,12 +570,12 @@ namespace Gameplay
 
         private void ApplyLevelUpPowerUp(int col, int row)
         {
-            if (grid.grid[col, row] == null || !PowerUpStore.TryUse(powerUp)) return;
+            if (grid.grid[col, row] == null) return;
 
             BeginComboTurn(false);
             moveResolving = true;
             RecordBoosterUse();
-            TowerController towerCtrl = grid.grid[col, row].GetComponent<TowerController>();
+            TowerController towerCtrl= grid.grid[col, row].GetComponent<TowerController>();
             towerCtrl.level++;
             towerCtrl.merge = true;
             grid.DamageAdjacentBreakables(col, row);
@@ -561,7 +588,7 @@ namespace Gameplay
 
         private void ApplyExtraTurnsPowerUp()
         {
-            if (LevelFlow.ActiveSession == null || !PowerUpStore.TryUse(powerUp)) return;
+            if (LevelFlow.ActiveSession == null) return;
 
             RecordBoosterUse();
             LevelFlow.ActiveSession.GrantExtraTurns(3);

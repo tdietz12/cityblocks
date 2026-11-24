@@ -18,12 +18,13 @@ namespace UI
         }
 
         private void OnEnable() => Refresh();
+        private void Update() => Refresh();
 
         private void Refresh()
         {
             int uses = PowerUpStore.Uses(GameController.PowerUpType.lookAhead);
             bool inEffect = game != null && game.LookAheadTurnsRemaining > 0;
-            if (button != null) button.interactable = uses > 0 && !inEffect;
+            if (button != null) button.interactable = PowerUpStore.CanUse && game != null && !game.IsPowerUpRequestPending && uses > 0 && !inEffect;
             if (label != null)
             {
                 label.text = inEffect
