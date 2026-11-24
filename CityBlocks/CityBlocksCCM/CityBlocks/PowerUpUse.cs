@@ -31,8 +31,12 @@ namespace CityBlocks.CloudCode
         public string WelcomeGrantedAt { get; set; } = "";
         public List<PowerUpReceipt> Receipts { get; set; } = new List<PowerUpReceipt>();
         public List<LevelRewardReceipt> LevelClaims { get; set; } = new List<LevelRewardReceipt>();
+        public List<DailyRewardReceipt> DailyClaims { get; set; } = new List<DailyRewardReceipt>();
+        public string LastDailyClaimUtcDate { get; set; } = "";
+        public int DailyStreakDay { get; set; }
 
-        public bool HasPendingOperation => Receipts.Any(r => r.Status == "pending") || LevelClaims.Any(r => r.Status == "pending");
+        public bool HasPendingOperation => Receipts.Any(r => r.Status == "pending") ||
+            LevelClaims.Any(r => r.Status == "pending") || DailyClaims.Any(r => r.Status == "pending");
     }
 
     public class JournalRead

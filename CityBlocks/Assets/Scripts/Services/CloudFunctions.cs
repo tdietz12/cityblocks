@@ -49,6 +49,22 @@ namespace CloudServices
             }
         }
 
+        /// <summary>Reports a campaign win. The server selects amounts and prevents repeated rewards.</summary>
+        public static async Task<LevelWinRewardResult> AwardLevelRewardsAsync(int levelNumber)
+        {
+            if (!await CloudBootstrap.EnsureSignedInAsync()) return null;
+            try
+            {
+                return await CloudCodeService.Instance.CallModuleEndpointAsync<LevelWinRewardResult>(ModuleName, "AwardLevelRewards",
+                    new Dictionary<string, object> { { "levelNumber", levelNumber } });
+            }
+            catch (CloudCodeException exception)
+            {
+                Debug.LogWarning("[CloudFunctions] AwardLevelRewards failed (" + exception.Reason + "): " + exception.Message);
+                return null;
+            }
+        }
+
         /// <summary>Server time in UTC, or null if offline / the call failed.</summary>
         public static async Task<DateTime?> GetServerTimeAsync()
         {

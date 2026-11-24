@@ -15,7 +15,7 @@
         {
             "levelNumber": 2,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -25,7 +25,7 @@
         {
             "levelNumber": 3,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -35,7 +35,7 @@
         {
             "levelNumber": 4,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -45,7 +45,7 @@
         {
             "levelNumber": 5,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -55,7 +55,7 @@
         {
             "levelNumber": 6,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -65,7 +65,7 @@
         {
             "levelNumber": 7,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -75,7 +75,7 @@
         {
             "levelNumber": 8,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -85,7 +85,7 @@
         {
             "levelNumber": 9,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,
@@ -95,7 +95,7 @@
         {
             "levelNumber": 10,
             "rewards": {
-                "coins": 0,
+                "coins": 20,
                 "deleteUses": 0,
                 "levelUpUses": 0,
                 "lookAheadUses": 0,

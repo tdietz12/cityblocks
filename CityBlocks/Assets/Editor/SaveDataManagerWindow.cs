@@ -331,6 +331,7 @@ public static void RefreshActiveUI()
         private bool clearEndlessSave = true;
         private bool clearPlayerPrefsAndStreaks = false;
         private bool resetTargetLevelReward = false;
+        private bool includeDevelopmentCloudInFullReset = false;
         private bool settingPlayerLevel;
         // Deliberately not serialized or saved to EditorPrefs/PlayerPrefs.
         private string rewardResetKeyId = "";
@@ -363,6 +364,8 @@ public static void RefreshActiveUI()
         {
             string signedInPlayer = CloudServices.AccountService.PlayerId;
             if (!string.IsNullOrEmpty(signedInPlayer)) return signedInPlayer;
+            string authKey = CityBlocks.EditorTools.FullPlayerTestReset.AuthKey(CloudProjectSettings.projectId, "player_id");
+            if (PlayerPrefs.HasKey(authKey)) return PlayerPrefs.GetString(authKey);
             string cache = PlayerPrefs.GetString("cityblocks_wallet_cache", "");
             if (string.IsNullOrEmpty(cache)) return null;
             try { return (string)Newtonsoft.Json.Linq.JObject.Parse(cache)["playerId"]; }
@@ -420,6 +423,54 @@ public static void RefreshActiveUI()
                 {
                     rewardResetKeySecret = "";
                     settingPlayerLevel = false;
+                    Repaint();
+                }
+            }
+        }
+
+        private async void FullResetWithCloud()
+        {
+            if (settingPlayerLevel) return;
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                statusMessage = "Stop Play Mode before performing a complete test reset.";
+                statusMessageType = MessageType.Error;
+                return;
+            }
+            string playerId = CurrentRewardResetPlayerId();
+            if (!EditorUtility.DisplayDialog("Delete local + development cloud data?",
+                "Player: " + playerId + "\nEnvironment: development\n\nDeletes cloud progress and reward history, sets currencies to 0, removes inventory (including No Ads), and clears local saves. Keeps the account/sign-in links. Stop all other test clients. This cannot be undone.",
+                "Reset Local + Cloud", "Cancel")) return;
+            string keyId = rewardResetKeyId, secret = rewardResetKeySecret;
+            settingPlayerLevel = true;
+            try
+            {
+                await CityBlocks.EditorTools.FullPlayerTestReset.ResetAsync(playerId, keyId, secret, message =>
+                {
+                    if (this == null) return;
+                    statusMessage = message;
+                    statusMessageType = MessageType.Info;
+                    Repaint();
+                });
+                if (this == null) return;
+                targetLevel = 1;
+                completeTutorial = false;
+                markPreviousCompleted = false;
+                statusMessage = "Local and development cloud data reset. The same player can receive the 500-coin welcome bundle and first-win rewards again. Sign-in preserved.";
+                statusMessageType = MessageType.Info;
+            }
+            catch (Exception exception)
+            {
+                if (this == null) return;
+                statusMessage = "Full reset did not complete: " + exception.Message;
+                statusMessageType = MessageType.Error;
+            }
+            finally
+            {
+                if (this != null)
+                {
+                    settingPlayerLevel = false;
+                    rewardResetKeySecret = "";
                     Repaint();
                 }
             }
@@ -539,16 +590,36 @@ public static void RefreshActiveUI()
             EditorGUILayout.Space(8);
 
             // Danger Zone: Full Reset
-            GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
-            if (GUILayout.Button("Full Reset to New Player (Delete All Saves)", GUILayout.Height(28)))
+            includeDevelopmentCloudInFullReset = EditorGUILayout.Toggle(
+                new GUIContent("Include Development Cloud", "Reset this player's cloud balances, inventory, progress and reward history too. Preserve authentication and sign-in links."),
+                includeDevelopmentCloudInFullReset);
+            if (includeDevelopmentCloudInFullReset)
             {
-                SaveDataEditorMenu.DeleteAllSaveFilesAndReset();
-                targetLevel = 1;
-                completeTutorial = false;
-                markPreviousCompleted = false;
-                statusMessage = "All save data deleted. Player reset to clean new player state.";
-                statusMessageType = MessageType.Warning;
-                Repaint();
+                EditorGUILayout.HelpBox("Stop Play Mode and all test clients first. Clears development Cloud Save, sets cloud currencies to 0 and removes inventory/No Ads. Keeps the account and cached sign-in. Production and Apple purchase records are untouched.", MessageType.Warning);
+                EditorGUILayout.LabelField("Cloud Player ID", CurrentRewardResetPlayerId() ?? "Unknown — sign in once in Play Mode");
+                if (!resetTargetLevelReward)
+                {
+                    rewardResetKeyId = EditorGUILayout.TextField("Service Account Key ID", rewardResetKeyId);
+                    rewardResetKeySecret = EditorGUILayout.PasswordField("Key Secret", rewardResetKeySecret);
+                }
+            }
+            GUI.backgroundColor = new Color(1f, 0.5f, 0.5f);
+            using (new EditorGUI.DisabledScope(settingPlayerLevel))
+            {
+                if (GUILayout.Button(includeDevelopmentCloudInFullReset ? "Full Reset: Local + Development Cloud" : "Full Reset to New Player (Delete All Saves)", GUILayout.Height(28)))
+                {
+                    if (includeDevelopmentCloudInFullReset) FullResetWithCloud();
+                    else
+                    {
+                        SaveDataEditorMenu.DeleteAllSaveFilesAndReset();
+                        targetLevel = 1;
+                        completeTutorial = false;
+                        markPreviousCompleted = false;
+                        statusMessage = "All save data deleted. Player reset to clean new player state.";
+                        statusMessageType = MessageType.Warning;
+                        Repaint();
+                    }
+                }
             }
             GUI.backgroundColor = Color.white;
 

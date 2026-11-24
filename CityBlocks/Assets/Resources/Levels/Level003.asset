@@ -132,3 +132,9 @@ MonoBehaviour:
     target: 4
   tutorialSteps: []
   showAdAfterWin: 0
+  firstWinRewards:
+    coins: 20
+    deleteUses: 0
+    levelUpUses: 0
+    lookAheadUses: 0
+    extraTurnsUses: 0

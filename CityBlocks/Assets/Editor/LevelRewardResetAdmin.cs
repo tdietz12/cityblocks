@@ -17,7 +17,7 @@ namespace CityBlocks.EditorTools
         {
             if (levelNumber < 1) throw new ArgumentOutOfRangeException(nameof(levelNumber));
             JObject journal = JObject.Parse(json);
-            foreach (string field in new[] { "Receipts", "LevelClaims" })
+            foreach (string field in new[] { "Receipts", "LevelClaims", "DailyClaims" })
             {
                 var entries = journal[field] as JArray;
                 if (entries != null && entries.OfType<JObject>().Any(r => (string)r["Status"] == "pending"))

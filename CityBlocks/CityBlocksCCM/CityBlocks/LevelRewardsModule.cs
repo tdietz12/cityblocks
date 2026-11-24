@@ -30,7 +30,7 @@ namespace CityBlocks.CloudCode
             return result;
         }
 
-        private sealed class Store : ILevelRewardStore
+        internal sealed class Store : ILevelRewardStore
         {
             private readonly IGameApiClient api;
             private readonly IExecutionContext context;

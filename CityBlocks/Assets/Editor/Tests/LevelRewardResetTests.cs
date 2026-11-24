@@ -20,8 +20,9 @@ namespace CityBlocks.EditorTests
             ExpectRefusal(() => EditorTools.LevelRewardResetAdmin.ResetClaimJson(original.Replace("\"Status\":\"applied\"", "\"Status\":\"pending\""), 10, out _));
             ExpectRefusal(() => EditorTools.LevelRewardResetAdmin.ResetClaimJson(original.Replace("\"Receipts\":[]", "\"Receipts\":[{\"Status\":\"pending\"}]"), 10, out _));
             ExpectRefusal(() => EditorTools.LevelRewardResetAdmin.ResetAsync("player", 10, "", "").GetAwaiter().GetResult());
+            ExpectRefusal(() => EditorTools.LevelRewardResetAdmin.ResetClaimJson(original.Replace("\"Receipts\":[]", "\"Receipts\":[],\"DailyClaims\":[{\"Status\":\"pending\"}]"), 10, out _));
             SessionState.SetBool("LevelRewardResetTests.Passed", true);
-            Debug.Log("[LevelRewardResetTests] 6 checks passed. No cloud or local player data was changed.");
+            Debug.Log("[LevelRewardResetTests] 7 checks passed. No cloud or local player data was changed.");
         }
 
         private static void Check(bool condition, string message)

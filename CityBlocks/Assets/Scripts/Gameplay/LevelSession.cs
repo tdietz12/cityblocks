@@ -210,6 +210,7 @@ namespace Gameplay
             LevelDefinition next = LevelCatalog.Next(Definition.levelNumber);
             Progress.Complete(Definition.levelNumber, next != null ? next.levelNumber : 0);
             LevelProgressStore.Save(Progress);
+            CloudServices.LevelWinRewardQueue.Enqueue(Definition.levelNumber);
             finished = true;
             game.state = GameController.GameState.win;
             if (rulesUI != null) rulesUI.ShowWin();
