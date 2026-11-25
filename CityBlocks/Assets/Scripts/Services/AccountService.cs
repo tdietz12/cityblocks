@@ -45,9 +45,39 @@ namespace CloudServices
         /// <summary>Fires when the account kind changes (e.g. Game Center linked in the background).</summary>
         public static event Action<string> KindChanged;
 
+        // A PlayerId alone is insufficient: A -> B -> A must invalidate the first A request.
+        public static long SessionRevision { get; private set; }
+        public static event Action<string> SessionChanged;
+        private static Unity.Services.Authentication.IAuthenticationService observedAuth;
+
+        internal static void ObserveAuthentication()
+        {
+            if (observedAuth != null) return;
+            observedAuth = Unity.Services.Authentication.AuthenticationService.Instance;
+            observedAuth.SignedIn += OnSessionSignedIn;
+            observedAuth.SignedOut += OnSessionSignedOut;
+        }
+
+        private static void OnSessionSignedIn() => PublishSession(observedAuth.PlayerId);
+        private static void OnSessionSignedOut() => PublishSession(null);
+        private static void PublishSession(string playerId)
+        {
+            SessionRevision++;
+            try { SessionChanged?.Invoke(playerId); }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
+
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void ResetStatics()
         {
+            if (observedAuth != null)
+            {
+                observedAuth.SignedIn -= OnSessionSignedIn;
+                observedAuth.SignedOut -= OnSessionSignedOut;
+                observedAuth = null;
+            }
+            SessionRevision++;
+            SessionChanged = null;
             gameCenterAuth = null;
             cachedKind = null;
             appleAuth = null;
@@ -112,6 +142,7 @@ namespace CloudServices
         /// </summary>
         public static async Task SignInAsync()
         {
+            ObserveAuthentication();
             StartGameCenter();
 
             if (AuthenticationService.Instance.SessionTokenExists)
@@ -238,6 +269,7 @@ namespace CloudServices
 
             try
             {
+                ObserveAuthentication();
                 bool isNewPlayer = false;
                 if (CloudBootstrap.IsSignedIn)
                 {
@@ -337,6 +369,7 @@ namespace CloudServices
         /// </summary>
         private static async Task<bool> SwitchAsync(string kind, Func<Task> signIn)
         {
+            ObserveAuthentication();
             string previousPlayer = PlayerId;
             try
             {

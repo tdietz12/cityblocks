@@ -23,10 +23,13 @@ namespace UI
 
         private void OnEnable()
         {
+            LevelProgressStore.Saved += RefreshUnlockState;
             if (button == null) button = GetComponent<Button>();
             if (label == null) label = GetComponentInChildren<TMP_Text>();
             RefreshUnlockState();
         }
+
+        private void OnDisable() => LevelProgressStore.Saved -= RefreshUnlockState;
 
         private void RefreshUnlockState()
         {

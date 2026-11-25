@@ -9,6 +9,15 @@ namespace Gameplay
         private const string FileName = "level-progress.json";
         private static int cachedHighestUnlockedLevel = -1;
 
+        public static event Action Saved;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics()
+        {
+            cachedHighestUnlockedLevel = -1;
+            Saved = null;
+        }
+
         /// <summary>Highest unlocked level, cached from the last Load/Save so hot paths (analytics) avoid disk reads.</summary>
         public static int HighestUnlockedLevel
         {
@@ -58,6 +67,8 @@ namespace Gameplay
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(temporaryPath, path);
                 if (data != null) cachedHighestUnlockedLevel = Mathf.Max(1, data.highestUnlockedLevel);
+                try { Saved?.Invoke(); }
+                catch (Exception exception) { Debug.LogException(exception); }
             }
             catch (Exception exception)
             {

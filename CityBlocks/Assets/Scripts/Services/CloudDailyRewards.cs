@@ -30,15 +30,35 @@ namespace CloudServices
 
         public static async Task<DailyRewardResponse> CheckAndClaimAsync()
         {
+            string priorOwner = AccountService.PlayerId;
+            long priorRevision = AccountService.SessionRevision;
             if (Application.internetReachability == NetworkReachability.NotReachable || !await CloudBootstrap.EnsureSignedInAsync()) return null;
+            if (!string.IsNullOrEmpty(priorOwner) && !IsCurrentSession(priorOwner, priorRevision)) return null;
             string owner = AccountService.PlayerId;
-            var status = await CloudFunctions.GetDailyRewardStatusAsync();
-            if (status != null && status.Status == "not_initialized")
+            long revision = AccountService.SessionRevision;
+            return await CheckAndClaimForSessionAsync(owner, revision,
+                () => IsCurrentSession(owner, revision), CloudFunctions.GetDailyRewardStatusAsync,
+                CloudFunctions.MigrateDailyRewardStateAsync, CloudFunctions.ClaimDailyRewardAsync, PlayerWallet.RefreshAsync);
+        }
+
+        internal static bool IsCurrentSession(string owner, long revision) =>
+            !string.IsNullOrEmpty(owner) && AccountService.PlayerId == owner && AccountService.SessionRevision == revision;
+
+        // The same workflow is exercised with deferred, non-network transports by Editor regression checks.
+        internal static async Task<DailyRewardResponse> CheckAndClaimForSessionAsync(string owner, long revision,
+            Func<bool> isCurrent, Func<Task<DailyRewardResponse>> getStatus,
+            Func<int, string, Task<DailyRewardResponse>> migrate, Func<Task<DailyRewardResponse>> claim,
+            Func<Task<bool>> refreshWallet)
+        {
+            if (!isCurrent()) return null;
+            var status = await getStatus();
+            if (!isCurrent() || status == null) return null;
+            if (status.Status == "not_initialized")
             {
-                if (!await PlayerWallet.RefreshAsync()) return null;
-                status = await CloudFunctions.GetDailyRewardStatusAsync();
+                if (!await refreshWallet() || !isCurrent()) return null;
+                status = await getStatus();
+                if (!isCurrent() || status == null) return null;
             }
-            if (AccountService.PlayerId != owner || status == null) return null;
             if (!status.LegacyStateImported)
             {
                 string legacyOwner = PlayerPrefs.GetString(LegacyOwnerKey, "");
@@ -50,18 +70,19 @@ namespace CloudServices
                 }
                 int streak = 0; string date = "";
                 if (legacyOwner == owner) Gameplay.DailyLoginStreakService.ReadLegacyState(out streak, out date);
-                status = await CloudFunctions.MigrateDailyRewardStateAsync(streak, date);
-                if (status == null || AccountService.PlayerId != owner) return null;
+                status = await migrate(streak, date);
+                if (!isCurrent() || status == null) return null;
             }
             Store(status, owner);
             if (status.Status != "available") return status;
-            var claimed = await CloudFunctions.ClaimDailyRewardAsync();
-            if (claimed == null || AccountService.PlayerId != owner) return null;
+            var claimed = await claim();
+            if (!isCurrent() || claimed == null) return null;
             Store(claimed, owner);
             if (claimed.Status == "applied")
             {
                 LogConfirmedGrants(claimed);
-                await PlayerWallet.RefreshAsync();
+                await refreshWallet();
+                if (!isCurrent()) return null;
             }
             return claimed;
         }

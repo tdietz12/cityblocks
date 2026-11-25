@@ -12,6 +12,40 @@ namespace Data_Persistence
         private string saveGameDataFileName = "";
         private string progressionDataFileName = "";
 
+        public static event Action ProgressionSaved;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetStatics() => ProgressionSaved = null;
+
+        /// <summary>Updates only permanent records; leaves the run file and other progression fields intact.</summary>
+        public bool MergeCloudRecords(int score, int level)
+        {
+            try
+            {
+                var data = LoadProgressionData() ?? new ProgressionData();
+                data.recordScore = Math.Max(data.recordScore, score);
+                data.recordLevel = Math.Max(data.recordLevel, level);
+                string path = Path.Combine(fileDirectory, progressionDataFileName);
+                Directory.CreateDirectory(fileDirectory);
+                File.WriteAllText(path + ".tmp", JsonUtility.ToJson(data, true));
+                if (File.Exists(path)) File.Delete(path);
+                File.Move(path + ".tmp", path);
+                RaiseProgressionSaved();
+                return true;
+            }
+            catch (Exception exception)
+            {
+                Debug.LogError("Could not persist cloud records: " + exception);
+                return false;
+            }
+        }
+
+        private static void RaiseProgressionSaved()
+        {
+            try { ProgressionSaved?.Invoke(); }
+            catch (Exception exception) { Debug.LogException(exception); }
+        }
+
         public FileHandler(string directoryPath, string saveGameDataFileName, string progressionDataFileName)
         {
             this.fileDirectory = directoryPath;
@@ -117,6 +151,7 @@ namespace Data_Persistence
                         writer.Write(progressionDataToSave);
                     }
                 }
+                RaiseProgressionSaved();
             }
             catch (Exception e)
             {

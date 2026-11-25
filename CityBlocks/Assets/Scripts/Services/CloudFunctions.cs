@@ -75,12 +75,18 @@ namespace CloudServices
 
         private static async Task<DailyRewardResponse> CallDailyAsync(string endpoint, Dictionary<string, object> args)
         {
+            string owner = AccountService.PlayerId;
+            long revision = AccountService.SessionRevision;
             if (!await CloudBootstrap.EnsureSignedInAsync()) return null;
+            if (!string.IsNullOrEmpty(owner) && !CloudDailyRewards.IsCurrentSession(owner, revision)) return null;
+            owner = AccountService.PlayerId;
+            revision = AccountService.SessionRevision;
             try
             {
-                return await CloudCodeService.Instance.CallModuleEndpointAsync<DailyRewardResponse>(ModuleName, endpoint, args);
+                var response = await CloudCodeService.Instance.CallModuleEndpointAsync<DailyRewardResponse>(ModuleName, endpoint, args);
+                return CloudDailyRewards.IsCurrentSession(owner, revision) ? response : null;
             }
-            catch (CloudCodeException exception)
+catch (CloudCodeException exception)
             {
                 Debug.LogWarning("[DailyRewards] " + endpoint + " failed (" + exception.Reason + "): " + exception.Message);
                 return null;

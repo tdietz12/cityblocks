@@ -137,6 +137,20 @@ namespace Data_Persistence
             fileHandler.Save(gameSaveData, progressionData);
         }
 
+        public void MergeCloudRecords(int score, int level)
+        {
+            if (!HasLoaded || progressionData == null || LevelFlow.IsLevelMode) return;
+            progressionData.recordScore = Mathf.Max(progressionData.recordScore, score);
+            progressionData.recordLevel = Mathf.Max(progressionData.recordLevel, level);
+            foreach (var persistence in dataPersistenceObjects)
+            {
+                var game = persistence as GameController;
+                if (game == null) continue;
+                game.recordScore = Mathf.Max(game.recordScore, score);
+                game.recordLevel = Mathf.Max(game.recordLevel, level);
+            }
+        }
+
         private void OnDisable()
         {
             if (fileHandler != null && !LevelFlow.IsLevelMode)

@@ -41,10 +41,13 @@ namespace UI
 
         private void OnEnable()
         {
+            LevelProgressStore.Saved += RefreshButton;
             if (button == null) button = GetComponent<Button>();
             if (label == null) label = GetComponentInChildren<TMP_Text>();
             RefreshButton();
         }
+
+        private void OnDisable() => LevelProgressStore.Saved -= RefreshButton;
 
         public void RefreshButton()
         {

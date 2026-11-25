@@ -18,6 +18,14 @@
 > | **Order (rev. 2)** | **Player tracking first.** Analytics → retention events → accounts → cloud inventory + connectivity/offline lock (no heartbeat — option B) → cloud progress → cloud-validated purchases. Store UI / coin continues and the UI export come afterwards |
 > | **First-launch sign-in (rev. 2)** | Confirmed: silent Game Center → one-time Sign in with Apple / Continue as Guest screen → link later in Settings. The account (Game Center or Apple) carries progress, coins and power-ups across devices |
 > | **Retention event scope (rev. 2)** | Level lifecycle (start / win / lose / restart / quit / resume) + power-up use + extra-move continues, **plus** all four groups: Session & funnel, Economy flow, Store & ads, Daily & re-engagement |
+>
+> **Approved purchase revision (Step 33 review; supersedes original Rescue design):** Six new products only: No Ads and Starter/Small/Medium/Large/Mega. No Rescue IAP, no RMP_RESCUE, and no real-money purchase automatically applies extra moves. Continues spend in-game coins through the later server-confirmed continue flow. Existing continue defaults are provisional until reviewed; no new coin cost was approved in this conversation.
+>
+> **Deferred legacy coin packs:** The live app has four Approved consumables: CityBlocks400Gems, CityBlocks1000Gems, CityBlocks3000Gems, CityBlocks10000Gems. User deferred their rework into coin-only packs. Preserve IDs, prices, metadata, availability and Apple purchase records; do not add new Economy mappings or client offers for them in Step 34. Inspect live prices/quantities and old-client compatibility before a separately approved future rework. Any cityblocks.bundle.rescue draft, if created, stays unsubmitted; do not delete it automatically.
+>
+> **Step 33 manual evidence (user-confirmed; screenshots not required):** No Ads ($4.99, non-consumable), Starter ($4.99), Small ($9.99), Medium ($19.99), Large ($49.99), Mega ($99.99) consumable drafts have saved English (US) localization and US prices. Paid Apps Agreement, banking and tax setup are complete; Sandbox tester ready. Review screenshots/submission remain pending, so these are not claimed Ready to Submit or native-tested.
+>
+> **Apple receipt review:** Unity IAP 5.4.3 exposes Apple.AppReceipt and Apple.jwsRepresentation; Info.Receipt wraps AppReceipt in Unity JSON. Economy 3.5.4's Apple request expects base64 app-receipt data, not that JSON wrapper or JWS. No verified API-key/shared-secret Dashboard integration requirement was found; inspected Integrations menus are notifications. Do not generate credentials based on the old instruction. Step 35 must test real Sandbox app-receipt availability/redemption; JWS fallback remains a decision, not implemented. Step 34 is approved for six development-only RMP definitions; Steps 35 onward need separate approval.
 
 ---
 
@@ -37,7 +45,7 @@
 
 ## Core Gameplay Loop
 1. **Play** – Start a level (or Endless run), drop/merge towers within a move limit to meet objectives.
-2. **Outcome** – Win → coins reward + next level unlocked. Lose → **Continue decision** (spend coins for +5 moves, buy the Rescue Bundle, or Retry/Quit).
+2. **Outcome** – Win → coins reward + next level unlocked. Lose → **Continue decision** (spend coins for +5 moves, open Store if short, or Retry/Quit). No IAP automatically grants moves; legacy coin-pack rework is deferred.
 3. **Progress & Reward** – Coins accumulate from wins, first-try clears, daily login streak, and Endless milestones. Power-ups make hard levels possible.
 4. **Return** – Daily login streak (existing `DailyLoginStreakService`), local notifications (existing `DailyLoginNotification`), and cross-device cloud progress bring players back.
 
@@ -73,11 +81,10 @@
 | `cityblocks.bundle.medium` | Consumable | $19.99 | 6,000 coins + 5× each power-up ("Popular") |
 | `cityblocks.bundle.large` | Consumable | $49.99 | 16,000 coins + 12× each power-up |
 | `cityblocks.bundle.mega` | Consumable | $99.99 | 35,000 coins + 25× each power-up |
-| `cityblocks.bundle.rescue` | Consumable | $4.99 | **+5 moves (applied to current failed level)** + 1,000 coins + 1× each power-up — shown only on the fail screen (replaces existing `ExtraMovesOffer`) |
 
 Power-ups (existing `GameController.PowerUpType`): `delete`, `lookAhead` (stored as `deleteRowUses`), `levelUp`, `extraTurns`.
 
-> Current state (verified): all three `Assets/Resources/StoreOffers/*.asset` have an **empty `productId`**, so no real purchases are live yet. That's why Step 26 can safely switch power-ups to the cloud wallet before purchases move to the cloud in Milestone H.
+> Current checkout: the three existing `Assets/Resources/StoreOffers/*.asset` have empty product IDs and cannot initiate configured purchases. This does NOT mean the released app has no live IAP: its four Approved gem consumables remain available and are deferred from this rework. Keep new client product IDs empty until the server-validated switch-over; do not infer released-app behavior from this checkout.
 
 ## Controls and Input Methods
 - Touch only (existing tap-to-drop on `Cell`, legacy Input Manager / uGUI `EventSystem`). **No input changes.**
@@ -141,8 +148,8 @@ Prices use `Product.metadata.localizedPriceString` from Unity IAP (never hard-co
 │        OUT OF MOVES!             │
 │   Objective: Reach Tower 8 (7/8) │
 │                                  │
-│ [ +5 MOVES   🪙 900 ]            │ ← primary (green), disabled + "Not enough coins → Store" if short
-│ [ RESCUE BUNDLE  $4.99 ]         │ ← +5 moves, 1,000 coins, 1× each power-up
+│ [ +5 MOVES   🪙 900 ]            │ ← primary; provisional cost, later review
+│ [ STORE — if short on coins ]    │ ← purchase only credits wallet; player separately confirms coin continue
 │                                  │
 │   Retry          Main Menu       │
 │ ⚠ Connect to the internet to    │ ← offline banner (replaces both CTAs)
@@ -186,10 +193,10 @@ Prices use `Product.metadata.localizedPriceString` from Unity IAP (never hard-co
 | `Assets/Scripts/UI/LevelTutorialController.cs`, `TutorialStep.cs` | Tutorial flow | Step 8: `tutorial_step`, `tutorial_complete`. |
 | `Assets/Scripts/UI/PlayButton_MainMenu.cs`, `LevelButton_MainMenu.cs` | Menu level entry | Step 8: `level_select`. |
 | `Assets/Scripts/Data Persistence/ProgressionData.cs` | `recordScore`, `recordLevel`, `softCurrency`, `hardCurrency` | Endless records synced to cloud; `softCurrency/hardCurrency` deprecated (wallet lives in Economy). |
-| `Assets/Scripts/UI/LevelRulesUI.cs` | HUD, `ShowLoss()`, `BuyExtraMoves()` | Step 9: `continue_offered/declined`. Later: continue modal logic (coins + Rescue Bundle + offline state); coin chip; power-up lock states. |
+| `Assets/Scripts/UI/LevelRulesUI.cs` | HUD, `ShowLoss()`, `BuyExtraMoves()` | Step 9 retention events; later explicit coin continues, insufficient-funds → Store, coin chip and offline/power-up locks. No Rescue/direct IAP moves. |
 | `Assets/Scripts/UI/StoreOfferWindow.cs` | Combined daily special + no-ads panel | Step 11 audit; later replaced by `StoreScreen` (list of `StoreOfferCard`s). |
 | `Assets/Scripts/Gameplay/UnityAdsProvider.cs` | Interstitials, checks `PowerUpStore.AdsRemoved` | Reads entitlement from `PlayerWallet.AdsRemoved` (server-backed, cached). |
-| `Assets/Resources/StoreOffers/*.asset` | `DailySpecialOffer`, `NoAdsOffer`, `ExtraMovesOffer` (all with empty `productId`) | Replace with the 7 catalog assets above. |
+| `Assets/Resources/StoreOffers/*.asset` | `DailySpecialOffer`, `NoAdsOffer`, `ExtraMovesOffer` (all with empty `productId`) | Replace/rebind with six approved catalog offers in Step 36 after dependency inspection. No Rescue or deferred legacy coin-pack offers. |
 | `Packages/manifest.json` | Has `com.unity.purchasing` 5.4.3, `com.unity.ads` 4.19.0, `com.unity.mobile.notifications` 2.4.2; **no UGS packages yet** | Add UGS packages (below). |
 
 ## New runtime scripts (`Assets/Scripts/Services/`)
@@ -270,7 +277,7 @@ Endpoints (`[CloudCodeFunction]`):
 | `DeleteMyData()` | Wipes Cloud Save + Economy balances before auth deletion | all |
 
 ## Cloud resources (`Assets/CloudServices/`, deployed via Services > Deployment)
-- `Economy`: currencies `COINS`, `PU_DELETE`, `PU_LOOKAHEAD`, `PU_LEVELUP`, `PU_EXTRATURNS`; inventory item `NO_ADS`; Real-Money Purchases `RMP_NOADS`, `RMP_STARTER`, `RMP_SMALL`, `RMP_MEDIUM`, `RMP_LARGE`, `RMP_MEGA`, `RMP_RESCUE` mapped to Apple product IDs.
+- `Economy`: currencies `COINS`, `PU_DELETE`, `PU_LOOKAHEAD`, `PU_LEVELUP`, `PU_EXTRATURNS`; inventory item `NO_ADS`; Real-Money Purchases `RMP_NOADS`, `RMP_STARTER`, `RMP_SMALL`, `RMP_MEDIUM`, `RMP_LARGE`, `RMP_MEGA` mapped to Apple product IDs. No Rescue or deferred legacy coin-pack resources.
 - ~~`CityBlocks.rc` Remote Config~~ — dropped (option B): `coin_rewards`, `continue_costs` `[900,1500,2500]`, `continue_moves` 5 and `welcome_grant` are constants in the Cloud Code module; `store_layout` lives in the store offer assets.
 - `CityBlocks.ac` Access Control: deny-all-then-allow template; **players can only**: sign in/link, read Economy config/currencies/inventory, `purchases/appleappstore` (receipt redemption), call Cloud Code modules, read own Protected Cloud Save. **Denied:** direct currency/inventory writes, virtual purchases (not used), Cloud Save writes, unlink, player-auth users write (deletion goes through our flow — allow `users**` Write only if `DeleteAccountAsync` requires it; verify in Step 21).
 
@@ -320,7 +327,7 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 | `booster_used` | existing + `attempt_id`, `balance_after`, `is_online` | GameController.RecordBoosterUse | 9 |
 | `insufficient_funds` | existing (now also fired when a power-up has 0 uses) | GameController / LevelRulesUI | 9 |
 | `continue_offered` **(new)** | `level_number`, `continue_index` (+ `coin_cost`, `coins_balance` from Step 43) | ShowLoss | 9 |
-| `continue_purchased` **(new)** | + `currency`(iap → coins from Step 43), `moves_granted` | Extra Moves offer → BuyContinue / Rescue | 9 |
+| `continue_purchased` **(new)** | + `currency`(iap historically → coins from Step 43), `moves_granted` | Historical Extra Moves offer → server-confirmed BuyContinue only; IAP wallet credits are not continues | 9 / 43 |
 | `continue_declined` **(new)** | `level_number`, `choice`(retry/menu) | Loss buttons | 9 |
 | `powerup_granted` **(new)** | `booster_id`, `amount`, `source`(welcome/purchase/daily/migration), `balance_after` | PowerUpStore → later PlayerWallet | 9 |
 | `daily_reward_claimed` | existing + `coins` | DailyLoginStreakService | 10 |
@@ -381,12 +388,10 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **🔍 Checkpoint:** Compiles with no errors/warnings; no `Firebase` references anywhere in `Assets`; an iOS build no longer pulls Firebase pods (verify on the next device build).
 - **Depends on:** 4 + your confirmation that UGS events are arriving
 
-#### Step 5b — Unity Cloud crash & exception reporting · S (🧑 partly you) · *added in rev. 2 (replaces Crashlytics)* · ✅ done (test exception with player metadata confirmed in Cloud Diagnostics; device symbol check skipped by decision)
-- **🧑 You:** Window ▸ General ▸ Services ▸ **Cloud Diagnostics** ▸ turn on **Crash and Exception Reporting** (and enable Cloud Diagnostics for CityBlocks in the Dashboard if asked).
-- **Files:** `CloudBootstrap.cs` (after sign-in: `UnityEngine.CloudDiagnostics.CrashReportHandler.SetUserMetadata` with `player_id`, `environment`, `account_kind` so crashes can be matched to analytics players); temporary debug menu item to throw a test exception (removed afterwards).
-- **Notes:** check that iOS symbol upload is enabled so native crash stacks are readable; check which free-tier limits apply on the UGS pricing page before launch.
-- **🔍 Checkpoint:** A test exception from the Editor/development build appears under Dashboard ▸ Cloud Diagnostics with the player metadata; a forced crash on a TestFlight device shows a readable stack trace.
-- **Depends on:** 3
+#### Step 5b — ~~Unity Cloud crash & exception reporting~~ · historical only; out of current scope
+- Earlier plan recorded an Editor test exception and metadata integration. This is historical context, not a renewed implementation or verification claim.
+- **Current decision:** No crash reporter work, forced-crash tests, symbol-upload or crash-dashboard release gates. Do not enable/remove/modify existing reporting code as part of this task.
+- **Depends on:** — (no active work)
 
 ---
 
@@ -583,15 +588,26 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 #### Step 30 — ~~Endless results to the cloud~~ · merged into Step 27
 - The Endless record is part of the Cloud Save `progress` data (the `endless_new_record` event already exists from Step 8).
 
-#### Step 31 — Merge on sign-in / account switch + legacy migration · M
-- **Files:** `CloudProgressService.cs`, `AccountService.cs` (reload after switching accounts), `ProgressMergeTests.cs`.
-- **Behavior:** First sign-in uploads the existing local progress (players updating from the live version keep their levels). Switching to another existing account (Step 17) loads that account's progress, merged with what's on the device without going backwards.
-- **🔍 Checkpoint:** An existing install at local level 20 updates → the cloud shows level 20; a second device / reinstall restores it; progress never goes down.
+#### Step 31 — Merge on sign-in / account switch + legacy migration · M · 🟡 code verified; device checks pending
+- **Implemented:** AccountService observes Authentication SignedIn/SignedOut separately from KindChanged and publishes a monotonic SessionRevision. Both Settings SwitchAsync (Apple/Game Center) and first-run Apple AccountAlreadyLinked sign-out/sign-in are observed; unchanged-PlayerId links do not change session identity. CloudProgressSync binds successful identities, schedules target read/max-union synchronization, and preserves permanent device progress. No target is bound merely by a failed/cancelled sign-in; a successful fallback sign-in is handled as its own identity.
+- **Persistence:** new ProgressOwnerJournal in `cityblocks_progress_journal_<environment>` imports Step 27's `cityblocks_progress_owner_<environment>` and retains separate per-PlayerId progress-only snapshots/pending flags. Old-owner uncertain work is retained, never relabeled or uploaded under another owner's ID; target synchronization uses a fresh permanent-device-progress merge by policy. Local level/record files remain durable offline progress. Unknown/corrupt journal versions fail closed without overwriting checkpoints.
+- **Stale responses:** transport checks SessionRevision before/after reads, writes and serialized-gate waits. Lifecycle checks request owner + generation + revision before applying/acknowledging a response; A → B → A cannot revive the first A request. Stale completion cannot impose old-account backoff on the new session. Active campaign/Endless boards, wallet/migration data, entitlements, purchase IDs and reward queues are not synchronized or reset.
+- **Files:** AccountService.cs, CloudProgressService.cs, CloudProgressSync.cs; new ProgressOwnerJournal.cs and Editor/Tests/ProgressAccountTests.cs. No scenes, settings, backend resources or package changes.
+- **Verified this step:** C# compilation with no errors; ProgressAccountTests 26, ProgressMergeTests 21, ProgressSyncTests 14 and ProgressLifecycleTests 14 checks passed (75 total). Fake auth events/deferred transport, owner JSON relaunch, legacy local level 20, old-owner pending retention, target max/union merge, same-kind-independent events, sign-out/no-target-on-failure boundary and stale A → B → A rejection checked. Original progress prefs restored; temporary record files only; no real cloud/account/reward mutations. Live bundle ID unchanged; Editor stopped. Existing unused `SaveDataManagerWindow.claimableDay` warning remains outside scope.
+- **Not verified:** actual native Apple/Game Center link/switch/cancel/failure flows (including first-run conflict path), offline/reconnect/background termination on device, second-device/reinstall restoration, and an iOS build containing Step 31. Deterministic event-boundary tests are not device/provider tests. Known Step 27 limitation remains: concurrent first-ever progress-key creation lacks client CAS protection.
+- **🔍 Checkpoint (device):** Existing local level 20 survives first sign-in and appears in Cloud Save; switch accounts with offline progress and back, restart mid-sync, verify no progress downgrade and no wallet/reward transfer; second device/reinstall restores it.
+- **Next remaining plan task:** Step 32 close-out: inspect the already-implemented 25c/25d server-UTC daily claims/migration and client wiring, finish only remaining integration/verification gaps (do not rebuild rewards). Steps 25d/26/27/31 still have live/device gates. Step 33 is the subsequent manual IAP setup. Step 45 account deletion remains mandatory before App Store submission of account features.
 - **Depends on:** 17, 27
 
-#### Step 32 — Server-side daily reward (server clock) · M
-- **Files:** `PlayerModule.cs` (`ClaimDailyReward`), `DailyLoginStreakService.cs`, `DailyLoginStreakUI.cs`, `DailyLoginNotification.cs` (streak events from Step 10 now use server time).
-- **🔍 Checkpoint:** Claiming grants the reward through Economy; changing the device clock doesn't allow a second claim; offline shows "Connect to claim".
+#### Step 32 — Server-side daily reward (server clock) · M · 🟡 client close-out implemented; live/device verification pending
+- **Existing implementation retained:** 25c/25d DailyRewardsModule, server-UTC daily journal/CAS grants, authored deployed schedule and one-time legacy migration are already present. No backend, reward catalog, wallet authority, reward queue, or notification scheduling rebuild was needed.
+- **Close-out:** CloudDailyRewards and daily CloudFunctions transport now reject session changes across authentication/status/bootstrap/migration/claim awaits, including A → B → A. The popup clears prior-owner confirmation/schedule on SessionChanged, ignores stale/disabled/dismissed requests, uses the cached deployed schedule offline, and opens a retry state when the initial request throws. Confirmed UI copy states the 00:00 UTC reset. The obsolete local-clock Claim entry point now returns false without changing legacy data, inventory or analytics; legacy import/debug-preview utilities remain.
+- **Notifications inspected:** existing opt-in local 10:00 calendar reminder and notification-open analytics remain unchanged. A reminder is a re-engagement hint, not server eligibility or a grant; notification timing/device clock cannot authorize ClaimDailyReward.
+- **Files changed:** Assets/Scripts/Services/CloudDailyRewards.cs, CloudFunctions.cs; Assets/Scripts/UI/DailyLoginStreakUI.cs; Assets/Scripts/Gameplay/DailyLoginStreakService.cs; Assets/Editor/Tests/CloudDailyRewardTests.cs. No scene/prefab/package/settings or backend source changes. This client update needs an iOS build; no new module deployment required if the 25d migration/Schedule module is already deployed.
+- **Verified:** C# edits compiled without errors. Daily display/reference/UTC/session-reset checks 11 and deferred daily workflow boundary checks 11 passed (22 total). Covered stale status/migration/claim, A → B → A, applied versus replay/pending/offline, old-owner legacy isolation, local Claim refusal, preview analytics and existing scene wiring. Original preferences/cache and buffered analytics restored; fake transports only, no real account/reward mutation. Editor stopped; live bundle ID unchanged.
+- **Not verified:** no Play Mode/native notification or visual screenshot test, deployed daily claim/replay/clock manipulation, offline/reconnect, second device, uncertain-grant recovery, or iOS build this step. Existing backend tests were read, but attempts to rerun dotnet through RunCommand were blocked by execution-environment process/reference restrictions; no new backend test pass is claimed. User can run `dotnet test CityBlocksCCM/CityBlocks.Tests/CityBlocks.Tests.csproj` locally. Unresolved server pending operations remain fail-closed and require inspection/recovery, not blind retry.
+- **🔍 Checkpoint (device):** Claim credits the configured Economy currencies once per UTC date; moving the device clock does not enable another claim; offline shows Connect to claim with Retry; reconnect/account switch cannot present a stale account's reward; reminder tap only launches the app.
+- **Next:** stop for review; Step 33 manual IAP/Apple setup follows. 25d/26/27/31/32 live/device gates remain open; Step 45 account deletion is required before App Store submission of account features.
 - **Depends on:** 10, 24
 
 ---
@@ -599,25 +615,28 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 ## Milestone H — Purchases through the cloud (validated grants)
 > Purchased coins / power-ups / no-ads land in Economy like everything else. Interrupted purchases are finished by Unity IAP itself (it redelivers unfinished transactions on launch / resume); `ConnectivityService` also asks for them when coming back online. No heartbeat needed. This is the end of the **player tracking** scope.
 
-#### Step 33 — IAP products & Apple integration · 🧑 You · S
-- **Do:** Create the 7 IAP products in App Store Connect; add the Apple App Store integration (API key / shared secret) in Dashboard ▸ Economy; set up a Sandbox tester.
-- **🔍 Checkpoint:** Products are in "Ready to Submit"; the integration is saved.
+#### Step 33 — IAP drafts & Sandbox setup · 🧑 You · S · 🟡 manual setup confirmed; native validation deferred
+- **Done by user confirmation:** Six product drafts (No Ads and Starter–Mega), saved US prices/English localization, active agreements/banking/tax, Sandbox tester ready. No Rescue product required; legacy packs unchanged/deferred. Review screenshots/submission remain pending, not Ready to Submit or native-tested.
+- **Correction:** General Integrations are notifications, not verified Apple receipt settings. No API-key/shared-secret setup is required without evidence; actual compatibility is Step 35.
 - **Depends on:** 12
 
-#### Step 34 — Economy Real-Money Purchases · S
-- **Files:** Economy config → `RMP_NOADS`, `RMP_STARTER`, `RMP_SMALL`, `RMP_MEDIUM`, `RMP_LARGE`, `RMP_MEGA`, `RMP_RESCUE` mapped to the Apple product IDs with their rewards.
-- **🔍 Checkpoint:** Deployed; contents match the catalog table.
-- **Depends on:** 19, 33
+#### Step 34 — Economy Real-Money Purchases · S · ✅ authored, development deployed/published and remotely read back
+- **Files:** Assets/CloudServices/Economy/{RMP_NOADS,RMP_STARTER,RMP_SMALL,RMP_MEDIUM,RMP_LARGE,RMP_MEGA}.ecr. Map exact Apple IDs and catalog rewards: NO_ADS inventory x1; bundles grant COINS and all four PU_* currencies.
+- **Scope:** Development only. No RMP_RESCUE, deferred legacy mappings, backend/client implementation, purchase enabling or package/settings changes. Starter once-per-account eligibility is not enforced by an RMP definition; later server enforcement is mandatory before enabling it.
+- **Verified:** 78 deterministic JSON/mapping/reward/dependency/import/plan-integrity checks passed. Deployment API selected exactly six .ecr files under CityBlocks project 59df1639-a463-491f-8463-f5c8050ff1a0, development d2bd855b-8d2a-415c-85cc-ce00b5220dd9; all six returned Deployed/Created remotely. Installed Economy deployment handler publishes after resource writes; publish completed successfully. Subsequent read-only admin resource read-back returned 12 resources: all six existing currencies/inventory retained and the six RMP Apple IDs/rewards exactly match the catalog. No Rescue/legacy RMPs present. Production untouched.
+- **Limits:** No native/Sandbox receipt, purchase, restore, once-per-account, Play Mode, visual or iOS-build verification this step. Read-back is admin configuration plus successful publish, not a runtime client config/purchase test. No backend tests rerun. No runtime source, scene, wallet, access-policy or product-ID changes.
+- **🔍 Checkpoint:** Stop for review. Step 35 device receipt spike needs separate approval; Steps 36–37 are not implemented.
+- **Depends on:** 19, 33 manual setup
 
 #### Step 35 — Receipt-redemption spike · S · ⚠ decision point
 - **Files:** temporary debug script (removed afterwards).
-- **Do:** Buy the Starter Pack in Sandbox on a device → redeem the Unity IAP receipt with `RedeemAppleAppStorePurchaseAsync`.
-- **🔍 Checkpoint:** **Works** → continue to Step 36. **Fails** (StoreKit 2 format) → insert Step 35b: a Cloud Code `RedeemAppleTransaction` endpoint that verifies the signed transaction with Apple's App Store Server API.
-- **Depends on:** 34
+- **Do:** With separate approval, buy Starter in Sandbox and redeem raw base64 Apple.AppReceipt (or Unity receipt Payload). Info.Receipt JSON and Apple.jwsRepresentation are not base64 app receipts. Observe identity, actual grants and redelivery without enabling unsafe local fulfillment.
+- **🔍 Checkpoint:** Works → Step 36. Fails → first inspect missing/stale receipt, store mappings, environment/publish and access-policy errors. Only established format/service incompatibility warrants an agreed Step 35b server JWS verification/redemption with identity/replay/grant protection. No compatibility-guard bypass or forced legacy StoreKit workaround.
+- **Depends on:** 34 published development config verified
 
 #### Step 36 — Store offer data · S
-- **Files:** `StoreOfferDefinition.cs` (new fields), the 7 assets in `Assets/Resources/StoreOffers/` (replacing `DailySpecialOffer` / `ExtraMovesOffer`), updated references in `LevelRulesUI.prefab` / `StoreOffersWindow.prefab`.
-- **🔍 Checkpoint:** Compiles; the 7 offers appear in the Inspector; existing buttons are still bound.
+- **Files:** StoreOfferDefinition.cs and six assets for No Ads and Starter–Mega; safely update prefab references and retire obsolete DailySpecialOffer/ExtraMovesOffer references after inspection. No Rescue or deferred legacy offers.
+- **🔍 Checkpoint:** Compiles, six offers bound, all IAPs have zero direct extra-move grant. Coordinate product-ID enabling with server validation so no unsafe intermediate build ships.
 - **Depends on:** 34
 
 #### Step 37 — IAP switch-over to server-validated grants (+ interrupted purchases) · M
@@ -648,19 +667,19 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 - **Depends on:** 40
 
 #### Step 42 — `BuyContinue` endpoint · S
-- **Files:** `PlayerModule.cs` + tests (escalating cost from Remote Config, idempotent by `attemptId` + `continueIndex`).
-- **🔍 Checkpoint:** Tests pass; deployed.
+- **Files:** PlayerModule.cs + tests; option B server constants, not new Remote Config setup. Confirm costs before implementing (old 900/1,500/2,500 defaults are provisional), +5 moves; idempotent by attemptId + continueIndex with interrupted-debit/owner protection.
+- **🔍 Checkpoint:** Tests pass; deployed. Coin spend is separate from real-money wallet credit.
 - **Depends on:** 22
 
 #### Step 43 — Coin continue on the fail screen · M
 - **Files:** `LevelRulesUI.cs` (`ShowLoss`, continue button, "not enough coins → Store", offline banner; also wire `insufficient_funds` here and for 0-use power-up taps, moved from Step 9), `LevelLossPanel` in `LevelRulesUI.prefab`, `LevelSession.cs`, `LevelAnalytics.cs` (the `continue_*` events from Step 9 gain `coin_cost`, `coins_balance`, `currency=coins`; `coins_spent(sink=continue)`).
-- **🔍 Checkpoint:** Costs go 900 → 1,500 → 2,500 within one attempt; the same board continues; events logged; offline shows the banner.
+- **🔍 Checkpoint:** Approved coin costs apply once per server-confirmed +5-move continue on the same board. Insufficient coins → Store; no Rescue CTA. IAP credits wallet rewards only, never auto-spends coins or resumes play. Offline locks spends. Legacy coin-only pack rework is deferred.
 - **Depends on:** 26, 42
 
-#### Step 44 — Rescue Bundle on the fail screen · S
-- **Files:** `LevelRulesUI.cs`, `LevelRulesUI.prefab`.
-- **🔍 Checkpoint:** A Sandbox purchase gives +5 moves, coins and power-ups; if the app is killed mid-purchase the moves are applied to the saved run on relaunch.
-- **Depends on:** 37, 43
+#### Step 44 — ~~Rescue Bundle on the fail screen~~ · cancelled by user; retain numbering
+- No Rescue IAP or direct paid extra-move grant. Step 43 handles explicit server-confirmed coin continues and insufficient-funds → Store. Buying an IAP never automatically spends coins or resumes the level.
+- **Deferred future work (separate approval):** inspect live prices/quantities/old-client behavior before reworking CityBlocks400Gems, CityBlocks1000Gems, CityBlocks3000Gems and CityBlocks10000Gems into coin-only packs. Preserve live IDs and purchase records. Decide coin amounts/prices, mappings, rollout metadata and tests later; no automatic entitlement or balance migration is authorized.
+- **Checkpoint:** No Rescue CTA/catalog/grant implementation; existing drafts remain unsubmitted. Deferred legacy work is not a prerequisite silently included in Step 34.
 
 *(The old "Remaining retention events" step was removed in rev. 2 — its events now ship in Milestone B and in the steps that create them.)*
 
@@ -762,10 +781,10 @@ All events include `player_level_max`, `session_number`, `is_online`, `account_k
 3. Second device, same Game Center/Apple ID → identical level progress, Endless record, coins, power-ups, no-ads.
 4. Purchase each bundle in Sandbox → balance updates only after Economy redemption; kill app mid-purchase → relaunch → Unity IAP redelivery / `FetchPurchases` completes grant exactly once.
 5. No-ads: buy, reinstall, Restore Purchases → ads stay off; offline after owning → ads still off.
-6. Fail a level with ≥ 900 coins → +5 moves continues same board; 2nd continue costs 1,500; insufficient coins → Store opens; Rescue Bundle → moves + rewards.
+6. Fail a level with enough coins → explicit server-confirmed +5 moves on same board; insufficient coins → Store. Costs remain provisional until reviewed. Purchasing an IAP only credits its rewards; never auto-spends coins or resumes the run. Legacy coin-only packs remain deferred.
 7. Airplane mode: levels & Endless playable; power-up buttons locked with toast; continue/store show offline banner; win offline → coins appear after reconnect (queued result).
-8. Delete Account → data wiped, next launch is a brand-new player.
-9. UGS Analytics Event Browser shows all events from checks 1–8 with correct params; a forced test crash on device appears in Cloud Diagnostics with a readable stack and player metadata.
+8. Delete Account → data wiped, next launch is a brand-new player. Mandatory before account-feature App Store submission.
+9. UGS Analytics Event Browser shows all events from checks 1–8 with correct params. Crash reporting is out of scope; no forced crash/symbol-upload gate.
 10. Retention funnel check (after Step 11, again at launch): in the Data Explorer, build `session_start → level_select → level_start → level_complete` and `level_fail → continue_offered → continue_purchased` funnels and confirm numbers are plausible for a 1-day TestFlight group; level 1–10 win rate and restart rate can be charted per level from `attempt_id`.
 11. Wallet refresh: change a player's coin balance in the Dashboard → the game shows it after backgrounding and resuming; airplane mode during a purchase → grant arrives once after reconnect.
 12. Run **Tools ▸ CityBlocks ▸ Export UI to Desktop** → folder appears on Desktop with all ≈30 screen PNGs/SVGs, component PNGs, manifest; drag SVGs into Figma → editable named layers.

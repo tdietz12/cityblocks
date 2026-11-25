@@ -71,6 +71,7 @@ namespace UI
         private bool claimConfirmed;
         private RewardAmounts[] serverSchedule;
         private TMP_Text collectLabel;
+        private int requestGeneration;
 
         private void Start()
         {
@@ -84,13 +85,35 @@ namespace UI
             StartCoroutine(AutoOpenAfterDelay());
         }
 
-        private void OnEnable() => CloudServices.ConnectivityService.OnlineChanged += OnOnlineChanged;
+        private void OnEnable()
+        {
+            CloudServices.ConnectivityService.OnlineChanged += OnOnlineChanged;
+            CloudServices.AccountService.SessionChanged += OnSessionChanged;
+        }
         private void OnDisable()
         {
             CloudServices.ConnectivityService.OnlineChanged -= OnOnlineChanged;
+            CloudServices.AccountService.SessionChanged -= OnSessionChanged;
+            requestGeneration++;
             autoOpenPending = false;
         }
-        private void OnDestroy()
+        private void OnSessionChanged(string playerId)
+        {
+            requestGeneration++;
+            popupOpen = false;
+            claimConfirmed = false;
+            previewOnly = false;
+            serverSchedule = null;
+            if (panel != null) UIPanelAnimator.SetAnimatedActive(panel, false);
+            if (!string.IsNullOrEmpty(playerId)) StartCoroutine(CheckAfterSessionChange());
+        }
+        private System.Collections.IEnumerator CheckAfterSessionChange()
+        {
+            while (cloudRequestRunning) yield return null;
+            if (isActiveAndEnabled && !string.IsNullOrEmpty(CloudServices.AccountService.PlayerId))
+                yield return AutoOpenAfterDelay();
+        }
+private void OnDestroy()
         {
             if (collectButton != null) collectButton.onClick.RemoveListener(OnCollect);
             if (closeButton != null) closeButton.onClick.RemoveListener(OnClose);
@@ -148,21 +171,24 @@ namespace UI
             if (cloudRequestRunning || panel == null || (popupOpen && claimConfirmed)) return;
             if (!ignoreFirstLaunch && IsFirstLaunchRedirect()) return;
             cloudRequestRunning = true;
+            int generation = requestGeneration;
+            long revision = CloudServices.AccountService.SessionRevision;
             previewOnly = false;
             if (collectButton != null) collectButton.interactable = false;
             try
             {
                 var response = await CloudServices.CloudDailyRewards.CheckAndClaimAsync();
-                if (this == null || !isActiveAndEnabled) return;
-                if (response != null && response.Schedule != null && response.Schedule.Length == 7)
-                    serverSchedule = response.Schedule;
+                if (this == null || !isActiveAndEnabled || generation != requestGeneration ||
+                    revision != CloudServices.AccountService.SessionRevision) return;
+                var cached = response ?? CloudServices.CloudDailyRewards.Cached;
+                if (cached != null && cached.Schedule != null && cached.Schedule.Length == 7)
+                    serverSchedule = cached.Schedule;
                 if (response != null && response.Status == "already_claimed")
                 {
                     // Another request/device may have claimed it. Never claim or add inventory locally.
                     if (popupOpen) Dismiss("close");
                     return;
                 }
-                var cached = response ?? CloudServices.CloudDailyRewards.Cached;
                 shownDay = Mathf.Clamp(cached != null ? cached.StreakDay : 1, 1, 7);
                 claimConfirmed = response != null && response.Status == "applied";
                 var reward = response != null && response.Reward != null ? response.Reward : RewardForDisplay(shownDay);
@@ -184,7 +210,20 @@ namespace UI
             catch (Exception exception)
             {
                 Debug.LogWarning("[DailyRewards] Popup check failed: " + exception.Message);
-                if (this != null && feedbackLabel != null) feedbackLabel.text = "Couldn't claim. Check your connection and retry.";
+                if (this != null && isActiveAndEnabled && generation == requestGeneration &&
+                    revision == CloudServices.AccountService.SessionRevision)
+                {
+                    claimConfirmed = false;
+                    shownDay = 1;
+                    var reward = RewardForDisplay(shownDay);
+                    Populate(shownDay, reward.ToPowerUps(), reward.coins);
+                    if (rewardLabel != null) rewardLabel.text = "CONNECT TO CLAIM";
+                    if (feedbackLabel != null) feedbackLabel.text = "Couldn't claim. Check your connection and retry.";
+                    if (collectLabel != null) collectLabel.text = "RETRY";
+                    popupOpen = true;
+                    openedAt = Time.realtimeSinceStartup;
+                    UIPanelAnimator.SetAnimatedActive(panel, true);
+                }
             }
             finally
             {
@@ -212,6 +251,7 @@ namespace UI
 
         private void Dismiss(string method)
         {
+            requestGeneration++;
             if (!popupOpen) return;
             popupOpen = false;
             if (!previewOnly) LevelAnalytics.DailyRewardPopupShown(shownDay, method, Mathf.RoundToInt(Time.realtimeSinceStartup - openedAt));
@@ -228,7 +268,7 @@ namespace UI
             {
                 int tomorrow = Mathf.Min(DailyLoginStreakService.StreakLength, day + 1);
                 var tomorrowReward = RewardForDisplay(tomorrow);
-                feedbackLabel.text = "Come back tomorrow for " + Describe(tomorrowReward.ToPowerUps(), tomorrowReward.coins).ToLowerInvariant();
+                feedbackLabel.text = "Resets at 00:00 UTC. Next: " + Describe(tomorrowReward.ToPowerUps(), tomorrowReward.coins).ToLowerInvariant();
             }
             for (int i = 0; i < dayTiles.Length; i++) PopulateTile(dayTiles[i], i + 1, day);
         }

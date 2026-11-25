@@ -78,30 +78,13 @@ namespace Gameplay
         public static int TotalUses(PowerUpInventory reward) =>
             reward == null ? 0 : reward.deleteUses + reward.deleteRowUses + reward.levelUpUses + reward.extraTurnsUses;
 
-        /// <summary>Claims today's reward and adds its power-ups to the inventory. False if already claimed today.</summary>
+        /// <summary>Legacy compatibility entry point. Daily rewards require a confirmed server claim.</summary>
+        [Obsolete("Use CloudServices.CloudDailyRewards.CheckAndClaimAsync; local daily claims are disabled.")]
         public static bool Claim(out int day, out PowerUpInventory reward)
         {
-            DailyLoginStreakData data = Load();
-            long today = DateTime.Now.Date.Ticks;
-            day = data.lastClaimedLocalDateTicks == today ? data.streakDay :
-                PreviousClaimWasYesterday(data) ? Mathf.Min(StreakLength, data.streakDay + 1) : 1;
+            day = 0;
             reward = null;
-            if (data.lastClaimedLocalDateTicks == today) return false;
-
-            // A previous claim that was neither today nor yesterday means at least one day was missed.
-            if (data.lastClaimedLocalDateTicks > 0 && today > data.lastClaimedLocalDateTicks && !PreviousClaimWasYesterday(data))
-            {
-                int daysMissed = Mathf.Max(1, (int)((today - data.lastClaimedLocalDateTicks) / TimeSpan.TicksPerDay) - 1);
-                LevelAnalytics.DailyStreakBroken(data.streakDay, daysMissed);
-            }
-
-            reward = RewardForDay(day);
-            data.streakDay = day;
-            data.lastClaimedLocalDateTicks = today;
-            Save(data); // save the claim first so a crash can't grant twice
-            PowerUpStore.Grant(reward, "daily");
-            LevelAnalytics.DailyRewardClaimed(day, TotalUses(reward));
-            return true;
+            return false;
         }
 
         #if UNITY_EDITOR
